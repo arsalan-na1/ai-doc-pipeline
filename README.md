@@ -1,8 +1,10 @@
 # AI Document Intelligence Pipeline
 
-A serverless, end-to-end AI document processing pipeline built entirely on AWS Free Tier. Upload a resume PDF through a web dashboard, and the system automatically extracts text, sends it to an LLM for structured analysis, and displays the parsed results — all for effectively zero cost.
+Upload a resume PDF, get structured data back. Runs on AWS Free Tier. The only cost is OpenAI, which works out to about two cents a month at a hundred resumes.
 
-## Architecture
+You upload a PDF through a web dashboard, the system pulls out the text, sends it to GPT-4o-mini, and shows you the parsed results. Everything is serverless.
+
+## How it works
 
 ```
                          ┌─────────────────────────────────────────────────┐
@@ -45,33 +47,41 @@ A serverless, end-to-end AI document processing pipeline built entirely on AWS F
   Secrets: SSM Parameter Store (OpenAI API key, encrypted at rest)
 ```
 
-## Demo Use Case: Resume Parsing
+The browser uploads PDFs straight to S3 using a presigned URL so we skip API Gateway's 10MB payload limit. S3 fires an event, Lambda extracts text with PyMuPDF, sends it to GPT-4o-mini, and writes structured results to DynamoDB. A second Lambda serves those results to the frontend through API Gateway.
 
-Upload a resume PDF and get back:
-- **Name, email, phone** — extracted contact details
-- **Skills** — listed as tags
-- **Work Experience** — company, role, duration, and highlights
-- **Education** — institution, degree, year
-- **Recruiter Summary** — a 2-sentence AI-generated summary
+Why not Textract? It costs $1.50 per page. PyMuPDF does the same thing for free on standard PDFs.
 
-## Prerequisites
+## What you get back
 
-- **AWS CLI** configured with credentials (`aws configure`)
-- **AWS Account** with Free Tier eligibility
-- **OpenAI API Key** — get one at [platform.openai.com](https://platform.openai.com)
-- **Docker** — for building the Lambda Layer (or WSL on Windows)
-- **Python 3.11** — for local development/testing
+Upload a resume and the system extracts:
 
-## Quick Start
+- Contact info (name, email, phone)
+- Skills, displayed as tags
+- Work experience with company, role, duration, and highlights
+- Education (where, what degree, when)
+- A 2-sentence recruiter summary written by the LLM
+
+## Before you start
+
+You'll need:
+
+- AWS CLI set up with your credentials (`aws configure`)
+- An AWS account still in the Free Tier window
+- An OpenAI API key from [platform.openai.com](https://platform.openai.com)
+- Docker for building the Lambda Layer (or WSL on Windows)
+- Python 3.11 if you want to test locally
+
+## Getting started
 
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-document-pipeline.git
+git clone https://github.com/arsalan-na1/ai-document-pipeline.git
 cd ai-document-pipeline
 cp .env.example .env
-# Edit .env with your values (AWS account ID, unique S3 bucket names, OpenAI key)
 ```
+
+Open `.env` and fill in your AWS account ID, pick unique S3 bucket names, and paste your OpenAI key.
 
 ### 2. Build the Lambda Layer
 
@@ -79,7 +89,7 @@ cp .env.example .env
 bash lambda/layer/build_layer.sh
 ```
 
-This uses Docker to package PyMuPDF and pdfplumber in an Amazon Linux 2023 environment compatible with AWS Lambda.
+This runs a Docker container with Amazon Linux 2023, installs PyMuPDF and pdfplumber inside it, and zips everything up for Lambda. Takes about a minute.
 
 ### 3. Deploy
 
@@ -87,64 +97,56 @@ This uses Docker to package PyMuPDF and pdfplumber in an Amazon Linux 2023 envir
 bash deploy/deploy.sh
 ```
 
-The script creates all AWS resources and outputs your frontend URL and API endpoint.
+The script creates your S3 buckets, DynamoDB table, IAM roles, Lambda functions, API Gateway, and uploads the frontend. When it finishes, it prints the dashboard URL.
 
-### 4. Use it
+### 4. Try it
 
-1. Open the frontend URL in your browser
-2. Upload a resume PDF (drag & drop or click to browse)
-3. Wait ~30 seconds for processing
-4. Click the document card to view parsed results
+1. Open the frontend URL from the deploy output
+2. Drag a resume PDF onto the upload area
+3. Wait about 30 seconds
+4. Click the document card to see parsed results
 
-## Project Structure
+## Project structure
 
 ```
 ai-document-pipeline/
-├── README.md                         # This file
-├── .env.example                      # Environment variable template
-├── .gitignore
 ├── lambda/
 │   ├── document_processor/
-│   │   ├── lambda_function.py        # S3-triggered: PDF → text → LLM → DynamoDB
+│   │   ├── lambda_function.py        # PDF text extraction + LLM analysis + DynamoDB write
 │   │   └── requirements.txt
 │   ├── results_api/
-│   │   ├── lambda_function.py        # API Gateway handler: list, get, upload URL
+│   │   ├── lambda_function.py        # Serves data to the frontend, generates presigned URLs
 │   │   └── requirements.txt
 │   └── layer/
-│       └── build_layer.sh            # Docker-based Lambda Layer builder
+│       └── build_layer.sh            # Builds the PyMuPDF/pdfplumber Lambda Layer
 ├── deploy/
-│   ├── deploy.sh                     # Full AWS CLI deployment (11 steps)
-│   ├── teardown.sh                   # Clean removal of all resources
+│   ├── deploy.sh                     # Creates all AWS resources
+│   ├── teardown.sh                   # Removes all AWS resources
 │   └── trust-policy.json             # IAM trust policy for Lambda
-└── frontend/
-    └── index.html                    # Single-file dashboard (HTML/CSS/JS)
+├── frontend/
+│   └── index.html                    # The whole dashboard in one file
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
-## AWS Services Used
+## AWS services used
 
-| Service | Purpose | Free Tier Limit |
-|---------|---------|-----------------|
-| **S3** | Document uploads + frontend hosting | 5GB storage, 20K GET, 2K PUT/month |
-| **Lambda** | All processing logic (2 functions) | 1M requests, 400K GB-seconds/month |
-| **DynamoDB** | Results storage | 25GB, 25 RCU/WCU |
-| **API Gateway** | REST API for frontend | 1M API calls/month |
-| **SSM Parameter Store** | OpenAI API key (encrypted) | Standard parameters free |
-| **CloudWatch** | Lambda logging | 5GB log ingestion/month |
-| **IAM** | Least-privilege roles | Always free |
+| Service | What it does | Free Tier limit |
+|---------|-------------|-----------------|
+| S3 | Stores uploaded PDFs, hosts the frontend | 5GB storage, 20K GET, 2K PUT/month |
+| Lambda | Runs both processing functions | 1M requests, 400K GB-seconds/month |
+| DynamoDB | Holds parsed results | 25GB, 25 read/write capacity units |
+| API Gateway | Routes frontend requests to Lambda | 1M calls/month |
+| SSM Parameter Store | Keeps the OpenAI key encrypted | Standard parameters are free |
+| CloudWatch | Lambda logs | 5GB log ingestion/month |
+| IAM | Per-function permissions | Always free |
 
-**Not used (by design):** Textract ($1.50/page) — replaced with PyMuPDF (free, open source).
+We don't use Textract ($1.50/page). PyMuPDF does the same job for free.
 
-## Lambda Layer: Packaging PyMuPDF
+## Building the Lambda Layer without Docker
 
-The document processor Lambda needs PyMuPDF and pdfplumber, which include compiled C extensions. These must be built on Amazon Linux to work in Lambda.
-
-### With Docker (recommended):
-
-```bash
-bash lambda/layer/build_layer.sh
-```
-
-### Without Docker (WSL or Linux):
+If you don't have Docker, you can build the layer on any Linux box or in WSL:
 
 ```bash
 pip install PyMuPDF==1.25.3 pdfplumber==0.11.4 openai==1.68.0 \
@@ -155,13 +157,11 @@ zip -r9 lambda-layer.zip python/
 rm -rf python/
 ```
 
-The resulting `lambda-layer.zip` is uploaded as a Lambda Layer during deployment.
+The deploy script picks up `lambda-layer.zip` from there.
 
-## Example Input/Output
+## Example output
 
-**Input:** A standard resume PDF
-
-**Output (JSON stored in DynamoDB):**
+Feed it a resume and you get something like:
 
 ```json
 {
@@ -191,30 +191,27 @@ The resulting `lambda-layer.zip` is uploaded as a Lambda Layer during deployment
 }
 ```
 
-## Cost Estimate (100 documents/month)
+## Cost at 100 documents per month
 
-| Service | Usage | Monthly Cost |
+| Service | Usage | Monthly cost |
 |---------|-------|-------------|
-| S3 | ~50MB storage, 200 requests | $0.00 |
-| Lambda | 100 processor (60s, 512MB) + 300 API (10s, 128MB) | $0.00 |
+| S3 | ~50MB stored, 200 requests | $0.00 |
+| Lambda | 100 heavy runs + 300 light ones | $0.00 |
 | DynamoDB | 100 writes, ~300 reads | $0.00 |
 | API Gateway | ~400 calls | $0.00 |
-| SSM Parameter Store | Standard tier | $0.00 |
-| CloudWatch Logs | ~10MB | $0.00 |
-| **OpenAI API** | 100 calls, gpt-4o-mini (~2K tokens each) | **~$0.02** |
+| SSM, CloudWatch, IAM | Minimal | $0.00 |
+| OpenAI API | 100 calls to gpt-4o-mini | ~$0.02 |
 | **Total** | | **~$0.02/month** |
 
-All AWS services stay well within Free Tier limits. The only cost is OpenAI API usage, which is negligible at portfolio-level traffic.
+All the AWS services stay inside Free Tier limits. OpenAI is the only line item and it rounds to zero at this volume.
 
-## Teardown
-
-Remove all AWS resources:
+## Tearing it down
 
 ```bash
 bash deploy/teardown.sh
 ```
 
-This deletes everything in reverse order: API Gateway, Lambdas, Layer, IAM role, DynamoDB table, SSM parameter, and both S3 buckets.
+Removes everything in reverse order: API Gateway, Lambdas, the Layer, IAM roles, DynamoDB table, SSM parameter, and both S3 buckets.
 
 ## License
 
