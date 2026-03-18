@@ -865,11 +865,89 @@
             letter-spacing: 0.5px;
         }
 
+        /* ===== MOBILE: 640px and below ===== */
         @media (max-width: 640px) {
-            .hero-title { letter-spacing: -1px; }
-            .modal { padding: 24px; border-radius: 18px; }
-            .exp-header { flex-direction: column; }
-            .upload-section { padding: 24px; }
+            /* Hide custom cursor on touch devices */
+            html, body { cursor: auto; }
+            .cursor-ring, .cursor-dot { display: none; }
+
+            .container { padding: 0 16px; }
+
+            /* Hero */
+            .hero { min-height: 45vh; padding: 60px 16px 30px; }
+            .hero-title {
+                font-size: 2rem;
+                letter-spacing: -0.5px;
+                line-height: 1.15;
+            }
+            .hero-sub { font-size: 0.95rem; }
+            .hero-badge { font-size: 0.68rem; padding: 5px 14px; margin-bottom: 18px; }
+
+            /* Upload section */
+            .upload-section { padding: 20px 16px; margin-bottom: 20px; border-radius: 16px; }
+            .section-label { font-size: 1rem; margin-bottom: 14px; }
+            .drop-zone { padding: 36px 16px; }
+            .drop-icon { width: 46px; height: 46px; font-size: 1.3rem; }
+            .drop-text { font-size: 0.85rem; }
+
+            /* Document cards */
+            .documents-section { margin-bottom: 50px; }
+            .doc-card {
+                padding: 16px;
+                border-radius: 14px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .doc-info h3 { font-size: 0.88rem; }
+            .doc-info .meta { font-size: 0.72rem; }
+
+            /* Detail modal */
+            .modal-overlay { padding: 20px 12px; align-items: flex-start; }
+            .modal {
+                padding: 24px 20px;
+                border-radius: 18px;
+                max-width: 100%;
+            }
+            .modal h2 { font-size: 1.25rem; }
+            .modal .contact { font-size: 0.82rem; margin-bottom: 20px; }
+            .modal-close { top: 12px; right: 14px; width: 32px; height: 32px; font-size: 1rem; }
+            .detail-section { margin-bottom: 20px; }
+            .detail-section h3 { font-size: 0.68rem; }
+            .skills-list { gap: 6px; }
+            .skill-pill { padding: 5px 12px; font-size: 0.76rem; }
+            .exp-header { flex-direction: column; gap: 2px; }
+            .exp-role { font-size: 0.88rem; }
+            .exp-company { font-size: 0.8rem; }
+            .exp-highlights { font-size: 0.8rem; }
+            .summary-box { padding: 14px; font-size: 0.85rem; line-height: 1.7; }
+
+            /* How It Works */
+            .hiw-btn { top: 16px; right: 16px; padding: 7px 16px; font-size: 0.75rem; border-radius: 10px; }
+            .hiw-overlay { padding: 20px 12px; align-items: flex-start; }
+            .hiw-modal {
+                padding: 28px 20px 24px;
+                border-radius: 18px;
+                max-width: 100%;
+            }
+            .hiw-modal h2 { font-size: 1.25rem; margin-bottom: 24px; }
+            .hiw-modal-close { top: 12px; right: 14px; width: 32px; height: 32px; }
+            .hiw-step { padding: 14px 10px; gap: 14px; }
+            .hiw-step-num { width: 36px; height: 36px; font-size: 0.85rem; border-radius: 10px; }
+            .hiw-step-body h4 { font-size: 0.88rem; }
+            .hiw-step-body p { font-size: 0.8rem; }
+            .hiw-bottom { font-size: 0.78rem; margin-top: 20px; padding-top: 16px; }
+
+            .footer { padding: 30px 16px 24px; font-size: 0.7rem; }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 380px) {
+            .hero-title { font-size: 1.7rem; }
+            .hero-sub { font-size: 0.88rem; }
+            .upload-section { padding: 16px 12px; }
+            .modal { padding: 20px 16px; }
+            .hiw-modal { padding: 24px 16px 20px; }
         }
     </style>
 </head>
@@ -1017,7 +1095,8 @@
         const canvas = document.getElementById('bg-canvas');
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        const isMobile = window.innerWidth <= 640;
+        renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5));
 
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
