@@ -40,8 +40,35 @@ API_NAME="ai-doc-pipeline-api"
 
 echo ""
 
+# Step 0: Disable CloudFront Distribution
+echo "[0/9] Disabling CloudFront distribution..."
+CF_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='AI Document Pipeline Frontend'].Id" --output text 2>/dev/null || echo "")
+if [ -n "$CF_ID" ] && [ "$CF_ID" != "None" ]; then
+    # Get the current config and ETag
+    CF_CONFIG=$(aws cloudfront get-distribution-config --id "$CF_ID" 2>/dev/null || echo "")
+    CF_ETAG=$(echo "$CF_CONFIG" | python3 -c "import sys,json; print(json.load(sys.stdin)['ETag'])" 2>/dev/null || echo "")
+    if [ -n "$CF_ETAG" ]; then
+        # Disable the distribution first (required before deletion)
+        echo "$CF_CONFIG" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+c = d['DistributionConfig']
+c['Enabled'] = False
+print(json.dumps(c))
+" > /tmp/cf-disable.json
+        aws cloudfront update-distribution --id "$CF_ID" --if-match "$CF_ETAG" \
+            --distribution-config file:///tmp/cf-disable.json >/dev/null 2>&1 || true
+        rm -f /tmp/cf-disable.json
+        echo "  Disabled CloudFront distribution: $CF_ID"
+        echo "  Note: Distribution must finish deploying before it can be deleted."
+        echo "  Run 'aws cloudfront delete-distribution --id $CF_ID --if-match <ETAG>' after it's fully disabled."
+    fi
+else
+    echo "  No CloudFront distribution found."
+fi
+
 # Step 1: Delete API Gateway
-echo "[1/8] Deleting API Gateway..."
+echo "[1/9] Deleting API Gateway..."
 API_ID=$(aws apigateway get-rest-apis --region "$AWS_REGION" \
     --query "items[?name=='$API_NAME'].id" --output text 2>/dev/null || echo "")
 if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then

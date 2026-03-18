@@ -550,10 +550,68 @@ else
     echo "  [!] Frontend file not found at: $FRONTEND_FILE"
 fi
 
-FRONTEND_URL="http://${S3_FRONTEND_BUCKET_NAME}.s3-website-${AWS_REGION}.amazonaws.com"
+S3_FRONTEND_URL="http://${S3_FRONTEND_BUCKET_NAME}.s3-website-${AWS_REGION}.amazonaws.com"
 
 # ============================================================================
-# Step 11: Print Summary
+# Step 11: Create CloudFront Distribution (HTTPS)
+# ============================================================================
+echo ""
+echo "[11/12] Creating CloudFront distribution for HTTPS..."
+
+CALLER_REF="ai-doc-pipeline-$(date +%s)"
+
+CF_OUTPUT=$(aws cloudfront create-distribution --cli-input-json '{
+  "DistributionConfig": {
+    "CallerReference": "'"$CALLER_REF"'",
+    "Comment": "AI Document Pipeline Frontend",
+    "Enabled": true,
+    "DefaultRootObject": "index.html",
+    "Origins": {
+      "Quantity": 1,
+      "Items": [
+        {
+          "Id": "S3-frontend",
+          "DomainName": "'"$S3_FRONTEND_BUCKET_NAME"'.s3-website-'"$AWS_REGION"'.amazonaws.com",
+          "CustomOriginConfig": {
+            "HTTPPort": 80,
+            "HTTPSPort": 443,
+            "OriginProtocolPolicy": "http-only"
+          }
+        }
+      ]
+    },
+    "DefaultCacheBehavior": {
+      "TargetOriginId": "S3-frontend",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "AllowedMethods": {
+        "Quantity": 2,
+        "Items": ["GET", "HEAD"]
+      },
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true
+    },
+    "ViewerCertificate": {
+      "CloudFrontDefaultCertificate": true
+    },
+    "PriceClass": "PriceClass_100"
+  }
+}' 2>&1) || true
+
+CF_DOMAIN=$(echo "$CF_OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['Distribution']['DomainName'])" 2>/dev/null || echo "")
+CF_ID=$(echo "$CF_OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin)['Distribution']['Id'])" 2>/dev/null || echo "")
+
+if [ -n "$CF_DOMAIN" ]; then
+    FRONTEND_URL="https://$CF_DOMAIN"
+    echo "  CloudFront distribution created: $CF_ID"
+    echo "  HTTPS URL: $FRONTEND_URL"
+    echo "  Note: Distribution takes 5-10 minutes to deploy globally."
+else
+    echo "  [!] CloudFront creation failed or already exists. Using S3 URL."
+    FRONTEND_URL="$S3_FRONTEND_URL"
+fi
+
+# ============================================================================
+# Step 12: Print Summary
 # ============================================================================
 echo ""
 echo "============================================="
@@ -561,6 +619,10 @@ echo "  DEPLOYMENT COMPLETE!"
 echo "============================================="
 echo ""
 echo "  Frontend URL:    $FRONTEND_URL"
+if [ -n "$CF_DOMAIN" ]; then
+echo "  S3 URL (HTTP):   $S3_FRONTEND_URL"
+echo "  CloudFront ID:   $CF_ID"
+fi
 echo "  API URL:         $API_URL"
 echo "  Upload Bucket:   $S3_BUCKET_NAME"
 echo "  DynamoDB Table:  $DYNAMODB_TABLE_NAME"
