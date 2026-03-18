@@ -374,8 +374,13 @@
             justify-content: center;
             font-size: 1.6rem;
             transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: iconPulse 3s ease-in-out infinite;
         }
-        .drop-zone-wrapper:hover .drop-icon { transform: translateY(-6px) scale(1.05); }
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.06); opacity: 1; }
+        }
+        .drop-zone-wrapper:hover .drop-icon { transform: translateY(-6px) scale(1.05); animation: none; }
 
         .drop-text { color: var(--text-dim); font-size: 0.92rem; }
         .drop-text .browse-link {
@@ -729,23 +734,24 @@
             z-index: 500;
             padding: 9px 22px;
             border-radius: 12px;
-            font-family: var(--font);
-            font-size: 0.82rem;
+            font-family: var(--font-display);
+            font-size: 0.8rem;
             font-weight: 600;
-            color: var(--text);
-            background: rgba(255,255,255,0.04);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(124,92,252,0.25);
+            color: rgba(180, 165, 250, 0.85);
+            background: rgba(15, 12, 35, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(124, 92, 252, 0.2);
             cursor: pointer;
             transition: all 0.35s cubic-bezier(0.23,1,0.32,1);
             letter-spacing: 0.3px;
+            box-shadow: 0 0 12px rgba(124,92,252,0.08), inset 0 0 12px rgba(124,92,252,0.04);
         }
         .hiw-btn:hover {
-            border-color: rgba(124,92,252,0.6);
-            color: var(--text-bright);
-            background: rgba(124,92,252,0.1);
-            box-shadow: 0 0 20px rgba(124,92,252,0.2), 0 4px 15px rgba(0,0,0,0.3);
+            border-color: rgba(124,92,252,0.5);
+            color: #d4ccff;
+            background: rgba(20, 15, 50, 0.75);
+            box-shadow: 0 0 25px rgba(124,92,252,0.2), 0 4px 20px rgba(0,0,0,0.4), inset 0 0 15px rgba(124,92,252,0.06);
             transform: translateY(-1px);
         }
 
@@ -860,10 +866,16 @@
         .footer {
             text-align: center;
             padding: 40px 20px 30px;
-            color: rgba(107,115,148,0.4);
+            color: rgba(107,115,148,0.35);
             font-size: 0.75rem;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
+        .footer a {
+            color: rgba(124,92,252,0.45);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .footer a:hover { color: rgba(124,92,252,0.75); }
 
         /* ===== MOBILE: 640px and below ===== */
         @media (max-width: 640px) {
@@ -1040,7 +1052,7 @@
             </div>
         </div>
 
-        <div class="footer">Built with AWS Lambda, DynamoDB, PyMuPDF & GPT-4o-mini</div>
+        <div class="footer">Built by <a href="https://github.com/arsalan-na1" target="_blank" rel="noopener">Arsalan Nawabi</a></div>
     </div>
 
     <!-- Modal -->
@@ -1303,7 +1315,7 @@
 
     function renderDocuments(docs) {
         if (!docs.length) {
-            documentsList.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>No documents yet. Upload a resume PDF to get started.</p></div>';
+            documentsList.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>Upload your first resume to get started.</p></div>';
             return;
         }
         documentsList.innerHTML = docs.map((doc, i) => {
