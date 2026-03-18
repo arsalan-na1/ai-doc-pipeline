@@ -722,6 +722,141 @@
         }
         @keyframes ripple { to { transform: scale(4); opacity: 0; } }
 
+        /* How It Works button */
+        .hiw-btn {
+            position: fixed;
+            top: 24px; right: 24px;
+            z-index: 500;
+            padding: 9px 22px;
+            border-radius: 12px;
+            font-family: var(--font);
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(124,92,252,0.25);
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.23,1,0.32,1);
+            letter-spacing: 0.3px;
+        }
+        .hiw-btn:hover {
+            border-color: rgba(124,92,252,0.6);
+            color: var(--text-bright);
+            background: rgba(124,92,252,0.1);
+            box-shadow: 0 0 20px rgba(124,92,252,0.2), 0 4px 15px rgba(0,0,0,0.3);
+            transform: translateY(-1px);
+        }
+
+        /* How It Works modal */
+        .hiw-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5,5,16,0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .hiw-overlay.active { display: flex; }
+
+        .hiw-modal {
+            background: rgba(16,16,40,0.92);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 600px;
+            padding: 44px 40px 36px;
+            position: relative;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(124,92,252,0.05);
+        }
+        .hiw-modal-close {
+            position: absolute;
+            top: 16px; right: 20px;
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.35s;
+        }
+        .hiw-modal-close:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            transform: rotate(90deg);
+        }
+        .hiw-modal h2 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin-bottom: 32px;
+        }
+
+        .hiw-steps { display: flex; flex-direction: column; gap: 4px; }
+
+        .hiw-step {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            padding: 18px 16px;
+            border-radius: 14px;
+            transition: background 0.3s;
+        }
+        .hiw-step:hover { background: rgba(255,255,255,0.025); }
+
+        .hiw-step-num {
+            flex-shrink: 0;
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(124,92,252,0.15), rgba(199,76,255,0.1));
+            border: 1px solid rgba(124,92,252,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .hiw-step-body h4 {
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-bright);
+            margin-bottom: 4px;
+        }
+        .hiw-step-body p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .hiw-bottom {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+        }
+        .hiw-bottom span {
+            color: var(--success);
+            font-weight: 600;
+        }
+
         .footer {
             text-align: center;
             padding: 40px 20px 30px;
@@ -745,6 +880,48 @@
 
     <!-- WebGL shader background -->
     <canvas id="bg-canvas"></canvas>
+
+    <!-- How It Works button -->
+    <button class="hiw-btn" id="hiwBtn">How It Works</button>
+
+    <!-- How It Works modal -->
+    <div class="hiw-overlay" id="hiwOverlay">
+        <div class="hiw-modal" id="hiwModal">
+            <button class="hiw-modal-close" id="hiwClose">&times;</button>
+            <h2>How it works</h2>
+            <div class="hiw-steps">
+                <div class="hiw-step" data-step="0">
+                    <div class="hiw-step-num">1</div>
+                    <div class="hiw-step-body">
+                        <h4>Upload</h4>
+                        <p>Drag and drop any resume PDF into the upload zone</p>
+                    </div>
+                </div>
+                <div class="hiw-step" data-step="1">
+                    <div class="hiw-step-num">2</div>
+                    <div class="hiw-step-body">
+                        <h4>Extract</h4>
+                        <p>PyMuPDF pulls all text from your PDF instantly</p>
+                    </div>
+                </div>
+                <div class="hiw-step" data-step="2">
+                    <div class="hiw-step-num">3</div>
+                    <div class="hiw-step-body">
+                        <h4>Analyze</h4>
+                        <p>GPT-4o-mini reads the resume and extracts name, email, skills, work experience, and education — then writes a recruiter summary</p>
+                    </div>
+                </div>
+                <div class="hiw-step" data-step="3">
+                    <div class="hiw-step-num">4</div>
+                    <div class="hiw-step-body">
+                        <h4>Dashboard</h4>
+                        <p>Results appear in the document list. Click any entry to view the full structured breakdown</p>
+                    </div>
+                </div>
+            </div>
+            <div class="hiw-bottom">Entirely serverless on AWS Free Tier. Costs <span>~$0.02</span> per 100 resumes.</div>
+        </div>
+    </div>
 
     <div class="page-content">
         <!-- Hero -->
@@ -1132,6 +1309,22 @@
             });
         });
     }
+
+    // ======== HOW IT WORKS MODAL ========
+    const hiwOverlay = document.getElementById('hiwOverlay');
+    const hiwModal = document.getElementById('hiwModal');
+    document.getElementById('hiwBtn').addEventListener('click', () => {
+        hiwOverlay.classList.add('active');
+        gsap.fromTo(hiwModal, { scale: 0.92, opacity: 0, y: 25 }, { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' });
+        document.querySelectorAll('.hiw-step').forEach(step => {
+            const i = parseInt(step.dataset.step);
+            gsap.fromTo(step, { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, delay: 0.2 + i * 0.1, ease: 'power3.out' });
+        });
+        gsap.fromTo('.hiw-bottom', { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.7 });
+    });
+    document.getElementById('hiwClose').addEventListener('click', () => hiwOverlay.classList.remove('active'));
+    hiwOverlay.addEventListener('click', e => { if (e.target === hiwOverlay) hiwOverlay.classList.remove('active'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hiwOverlay.classList.remove('active'); });
 
     function closeModal() { modalOverlay.classList.remove('active'); }
     document.getElementById('modalClose').addEventListener('click', closeModal);
