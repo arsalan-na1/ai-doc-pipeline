@@ -693,8 +693,6 @@
         </div>
     </div>
 
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- GSAP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -738,121 +736,223 @@
     });
 
     // ======== THREE.JS BACKGROUND ========
-    (function initThree() {
+    (function initNeuralNetwork() {
         const canvas = document.getElementById('bg-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const ctx = canvas.getContext('2d');
+        let W, H;
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 50;
-
-        // Particles
-        const count = 1200;
-        const positions = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-
-        const palette = [
-            new THREE.Color(0x7c5cfc),
-            new THREE.Color(0xc74cff),
-            new THREE.Color(0x4cc9ff),
-            new THREE.Color(0x34d399),
-        ];
-
-        for (let i = 0; i < count; i++) {
-            positions[i * 3] = (Math.random() - 0.5) * 120;
-            positions[i * 3 + 1] = (Math.random() - 0.5) * 120;
-            positions[i * 3 + 2] = (Math.random() - 0.5) * 80;
-            const c = palette[Math.floor(Math.random() * palette.length)];
-            colors[i * 3] = c.r;
-            colors[i * 3 + 1] = c.g;
-            colors[i * 3 + 2] = c.b;
-            sizes[i] = Math.random() * 2 + 0.5;
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
         }
+        resize();
+        window.addEventListener('resize', resize);
 
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-        const mat = new THREE.PointsMaterial({
-            size: 1.2,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.6,
-            sizeAttenuation: true,
-            blending: THREE.AdditiveBlending,
+        // Mouse tracking for parallax
+        let mousePX = 0, mousePY = 0, scrollY = 0;
+        document.addEventListener('mousemove', e => {
+            mousePX = (e.clientX / W - 0.5) * 2;
+            mousePY = (e.clientY / H - 0.5) * 2;
         });
-
-        const points = new THREE.Points(geo, mat);
-        scene.add(points);
-
-        // Floating geometric shapes
-        const shapeMat = new THREE.MeshBasicMaterial({
-            color: 0x7c5cfc,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.08,
-        });
-
-        const shapes = [];
-        for (let i = 0; i < 6; i++) {
-            const geos = [
-                new THREE.IcosahedronGeometry(3 + Math.random() * 3, 1),
-                new THREE.OctahedronGeometry(2 + Math.random() * 3, 0),
-                new THREE.TorusGeometry(2 + Math.random() * 2, 0.4, 8, 16),
-            ];
-            const mesh = new THREE.Mesh(geos[i % 3], shapeMat.clone());
-            mesh.position.set(
-                (Math.random() - 0.5) * 80,
-                (Math.random() - 0.5) * 60,
-                (Math.random() - 0.5) * 40 - 10
-            );
-            mesh.material.opacity = 0.04 + Math.random() * 0.06;
-            mesh.userData = {
-                rotSpeed: { x: (Math.random() - 0.5) * 0.005, y: (Math.random() - 0.5) * 0.005 },
-                floatSpeed: 0.2 + Math.random() * 0.3,
-                floatOffset: Math.random() * Math.PI * 2,
-                baseY: mesh.position.y,
-            };
-            shapes.push(mesh);
-            scene.add(mesh);
-        }
-
-        let scrollY = 0;
         window.addEventListener('scroll', () => { scrollY = window.scrollY; });
 
-        let mousePX = 0, mousePY = 0;
-        document.addEventListener('mousemove', e => {
-            mousePX = (e.clientX / window.innerWidth - 0.5) * 2;
-            mousePY = (e.clientY / window.innerHeight - 0.5) * 2;
-        });
+        // Color palette — deep blue/purple with occasional cyan
+        const nodeColors = [
+            { r: 60, g: 50, b: 160 },   // deep indigo
+            { r: 45, g: 40, b: 130 },    // darker blue
+            { r: 80, g: 60, b: 180 },    // purple-blue
+            { r: 50, g: 70, b: 150 },    // muted blue
+            { r: 40, g: 150, b: 170 },   // teal accent (rare)
+            { r: 70, g: 130, b: 180 },   // steel cyan
+        ];
+
+        // Generate network nodes
+        const NODE_COUNT = 90;
+        const nodes = [];
+        for (let i = 0; i < NODE_COUNT; i++) {
+            const col = nodeColors[i < NODE_COUNT * 0.15 ? 4 + Math.floor(Math.random() * 2) : Math.floor(Math.random() * 4)];
+            nodes.push({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                baseX: 0, baseY: 0, // set after
+                vx: (Math.random() - 0.5) * 0.15,
+                vy: (Math.random() - 0.5) * 0.15,
+                radius: 1.5 + Math.random() * 2,
+                color: col,
+                pulsePhase: Math.random() * Math.PI * 2,
+                pulseSpeed: 0.3 + Math.random() * 0.5,
+                breathPhase: Math.random() * Math.PI * 2,
+                breathAmpX: 8 + Math.random() * 20,
+                breathAmpY: 8 + Math.random() * 20,
+                breathSpeed: 0.15 + Math.random() * 0.25,
+            });
+            nodes[nodes.length - 1].baseX = nodes[nodes.length - 1].x;
+            nodes[nodes.length - 1].baseY = nodes[nodes.length - 1].y;
+        }
+
+        // Build connections — each node connects to nearest neighbors within range
+        const CONNECTION_DIST = 220;
+        const connections = [];
+        for (let i = 0; i < NODE_COUNT; i++) {
+            for (let j = i + 1; j < NODE_COUNT; j++) {
+                const dx = nodes[i].baseX - nodes[j].baseX;
+                const dy = nodes[i].baseY - nodes[j].baseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < CONNECTION_DIST) {
+                    connections.push({
+                        a: i, b: j, dist,
+                        pulseOffset: Math.random() * Math.PI * 2,
+                        pulseSpeed: 0.4 + Math.random() * 0.8,
+                        active: Math.random() < 0.6, // not all connections pulse
+                    });
+                }
+            }
+        }
+
+        // Data pulses — lights that travel along connections
+        const MAX_PULSES = 18;
+        const pulses = [];
+
+        function spawnPulse() {
+            if (pulses.length >= MAX_PULSES || connections.length === 0) return;
+            const conn = connections[Math.floor(Math.random() * connections.length)];
+            if (!conn.active) return;
+            const isCyan = Math.random() < 0.2;
+            pulses.push({
+                conn,
+                t: 0,
+                speed: 0.004 + Math.random() * 0.008,
+                forward: Math.random() < 0.5,
+                color: isCyan
+                    ? { r: 80, g: 200, b: 220 }
+                    : { r: 100 + Math.random() * 40, g: 80 + Math.random() * 30, b: 200 + Math.random() * 55 },
+                size: 2 + Math.random() * 2,
+                glowSize: 12 + Math.random() * 10,
+            });
+        }
+
+        // Spawn initial pulses
+        for (let i = 0; i < 10; i++) spawnPulse();
 
         function animate() {
             requestAnimationFrame(animate);
-            const t = performance.now() * 0.001;
+            const time = performance.now() * 0.001;
 
-            points.rotation.y = t * 0.03 + mousePX * 0.1;
-            points.rotation.x = Math.sin(t * 0.02) * 0.1 + mousePY * 0.05;
-            points.position.y = scrollY * 0.01;
+            ctx.clearRect(0, 0, W, H);
 
-            shapes.forEach(s => {
-                s.rotation.x += s.userData.rotSpeed.x;
-                s.rotation.y += s.userData.rotSpeed.y;
-                s.position.y = s.userData.baseY + Math.sin(t * s.userData.floatSpeed + s.userData.floatOffset) * 3;
-            });
+            // Parallax offset from mouse
+            const parallaxX = mousePX * 12;
+            const parallaxY = mousePY * 8 + scrollY * 0.03;
 
-            renderer.render(scene, camera);
+            // Update node positions (gentle breathing motion)
+            for (const n of nodes) {
+                const breath = time * n.breathSpeed + n.breathPhase;
+                n.x = n.baseX + Math.sin(breath) * n.breathAmpX + parallaxX;
+                n.y = n.baseY + Math.cos(breath * 0.7) * n.breathAmpY + parallaxY;
+            }
+
+            // Draw connections
+            for (const conn of connections) {
+                const a = nodes[conn.a];
+                const b = nodes[conn.b];
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Fade out connections that stretch too far
+                const maxDist = CONNECTION_DIST * 1.3;
+                if (dist > maxDist) continue;
+                const distFade = 1 - (dist / maxDist);
+
+                // Base connection line — very subtle
+                const baseAlpha = 0.04 + distFade * 0.04;
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.strokeStyle = `rgba(70, 60, 150, ${baseAlpha})`;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                // Pulsing glow on the line — breathing effect
+                if (conn.active) {
+                    const pulse = Math.sin(time * conn.pulseSpeed + conn.pulseOffset);
+                    const pulseAlpha = (0.02 + pulse * 0.03) * distFade;
+                    if (pulseAlpha > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(a.x, a.y);
+                        ctx.lineTo(b.x, b.y);
+                        ctx.strokeStyle = `rgba(90, 80, 180, ${pulseAlpha})`;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw and update data pulses
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                const p = pulses[i];
+                p.t += p.speed;
+
+                if (p.t >= 1) {
+                    pulses.splice(i, 1);
+                    continue;
+                }
+
+                const t = p.forward ? p.t : 1 - p.t;
+                const a = nodes[p.conn.a];
+                const b = nodes[p.conn.b];
+                const px = a.x + (b.x - a.x) * t;
+                const py = a.y + (b.y - a.y) * t;
+
+                // Fade in/out at edges
+                const edgeFade = Math.min(p.t * 5, (1 - p.t) * 5, 1);
+
+                // Outer glow
+                const grd = ctx.createRadialGradient(px, py, 0, px, py, p.glowSize);
+                grd.addColorStop(0, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${0.25 * edgeFade})`);
+                grd.addColorStop(0.4, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${0.06 * edgeFade})`);
+                grd.addColorStop(1, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, 0)`);
+                ctx.beginPath();
+                ctx.arc(px, py, p.glowSize, 0, Math.PI * 2);
+                ctx.fillStyle = grd;
+                ctx.fill();
+
+                // Core dot
+                ctx.beginPath();
+                ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.color.r + 60}, ${p.color.g + 60}, ${p.color.b + 40}, ${0.8 * edgeFade})`;
+                ctx.fill();
+            }
+
+            // Spawn new pulses periodically
+            if (Math.random() < 0.03) spawnPulse();
+
+            // Draw nodes
+            for (const n of nodes) {
+                const pulse = Math.sin(time * n.pulseSpeed + n.pulsePhase);
+                const glowAlpha = 0.08 + pulse * 0.05;
+                const coreAlpha = 0.3 + pulse * 0.15;
+                const r = n.radius + pulse * 0.4;
+
+                // Node glow
+                const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 6);
+                grd.addColorStop(0, `rgba(${n.color.r + 40}, ${n.color.g + 40}, ${n.color.b + 40}, ${glowAlpha})`);
+                grd.addColorStop(0.5, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${glowAlpha * 0.3})`);
+                grd.addColorStop(1, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, 0)`);
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r * 6, 0, Math.PI * 2);
+                ctx.fillStyle = grd;
+                ctx.fill();
+
+                // Node core
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${n.color.r + 80}, ${n.color.g + 80}, ${n.color.b + 60}, ${coreAlpha})`;
+                ctx.fill();
+            }
         }
-        animate();
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        animate();
     })();
 
     // ======== GSAP ANIMATIONS ========
