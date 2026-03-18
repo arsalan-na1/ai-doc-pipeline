@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Intelligence Pipeline</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-900: #111827;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 24px 0;
+            box-shadow: var(--shadow);
+        }
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+
+        /* Upload Section */
+        .upload-section {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 32px;
+            margin: 24px 0;
+        }
+        .upload-section h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--gray-700); }
+
+        .drop-zone {
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .drop-zone .icon { font-size: 2rem; margin-bottom: 8px; }
+        .drop-zone p { color: var(--gray-500); font-size: 0.9rem; }
+        .drop-zone .browse { color: var(--primary); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+        .upload-status {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            display: none;
+        }
+        .upload-status.success { display: block; background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+        .upload-status.error { display: block; background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+        .upload-status.loading { display: block; background: #eff6ff; color: var(--primary); border: 1px solid #bfdbfe; }
+
+        /* Progress bar */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--gray-200);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: width 0.3s;
+            animation: indeterminate 1.5s infinite;
+        }
+        @keyframes indeterminate {
+            0% { width: 0%; margin-left: 0; }
+            50% { width: 60%; margin-left: 20%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+
+        /* Documents Section */
+        .documents-section {
+            margin: 24px 0 48px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-header h2 { font-size: 1.1rem; color: var(--gray-700); }
+        .refresh-btn {
+            background: none;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            color: var(--gray-700);
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        .doc-card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .doc-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+
+        .doc-info h3 { font-size: 0.95rem; font-weight: 600; }
+        .doc-info .meta { font-size: 0.8rem; color: var(--gray-500); margin-top: 2px; }
+
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-badge.completed { background: #dcfce7; color: var(--success); }
+        .status-badge.processing { background: #fef3c7; color: var(--warning); }
+        .status-badge.failed { background: #fee2e2; color: var(--danger); }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--gray-500);
+        }
+        .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 700px;
+            padding: 32px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-500);
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--gray-900); }
+
+        .modal h2 { font-size: 1.3rem; margin-bottom: 4px; }
+        .modal .contact { color: var(--gray-500); font-size: 0.9rem; margin-bottom: 20px; }
+
+        .detail-section { margin-bottom: 20px; }
+        .detail-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--gray-200);
+            padding-bottom: 4px;
+        }
+
+        .skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .skill-pill {
+            background: #eff6ff;
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .experience-item, .education-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .experience-item:last-child, .education-item:last-child { border-bottom: none; }
+        .exp-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+        .exp-role { font-weight: 600; font-size: 0.95rem; }
+        .exp-company { color: var(--gray-500); font-size: 0.85rem; }
+        .exp-duration { color: var(--gray-500); font-size: 0.8rem; }
+        .exp-highlights { margin-top: 6px; padding-left: 16px; font-size: 0.85rem; color: var(--gray-700); }
+        .exp-highlights li { margin-bottom: 2px; }
+
+        .summary-box {
+            background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+            border-radius: var(--radius);
+            padding: 16px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            border-left: 4px solid var(--primary);
+        }
+
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--radius);
+            padding: 16px;
+            color: var(--danger);
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .modal { padding: 20px; }
+            .exp-header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>AI Document Intelligence Pipeline</h1>
+            <p>Upload a resume PDF for AI-powered structured analysis</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2>Upload Document</h2>
+            <div class="drop-zone" id="dropZone">
+                <div class="icon">&#128196;</div>
+                <p>Drag & drop a PDF here, or <span class="browse" id="browseBtn">browse files</span></p>
+                <p style="margin-top:4px;font-size:0.8rem;color:#9ca3af;">PDF files only, max 10MB</p>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf" hidden>
+            <div class="upload-status" id="uploadStatus"></div>
+            <div class="progress-bar" id="progressBar"><div class="fill"></div></div>
+        </div>
+
+        <!-- Documents List -->
+        <div class="documents-section">
+            <div class="section-header">
+                <h2>Processed Documents</h2>
+                <button class="refresh-btn" onclick="fetchDocuments()">Refresh</button>
+            </div>
+            <div id="documentsList"></div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ---- Configuration ----
+        const API_BASE_URL = '__API_BASE_URL__';
+
+        // ---- DOM Elements ----
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const progressBar = document.getElementById('progressBar');
+        const documentsList = document.getElementById('documentsList');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalContent = document.getElementById('modalContent');
+
+        // ---- Upload Handlers ----
+        browseBtn.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== browseBtn) fileInput.click();
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        function showStatus(msg, type) {
+            uploadStatus.textContent = msg;
+            uploadStatus.className = 'upload-status ' + type;
+        }
+
+        async function handleFile(file) {
+            // Validate
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showStatus('Please select a PDF file.', 'error');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('File exceeds 10MB limit.', 'error');
+                return;
+            }
+
+            showStatus('Requesting upload URL...', 'loading');
+            progressBar.classList.add('active');
+
+            try {
+                // Get presigned URL
+                const urlRes = await fetch(`${API_BASE_URL}/upload-url`);
+                if (!urlRes.ok) throw new Error('Failed to get upload URL');
+                const { upload_url } = await urlRes.json();
+
+                // Upload to S3
+                showStatus('Uploading ' + file.name + '...', 'loading');
+                const uploadRes = await fetch(upload_url, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': 'application/pdf' },
+                });
+
+                if (!uploadRes.ok) throw new Error('Upload failed');
+
+                showStatus('Uploaded! Processing will begin shortly...', 'success');
+                progressBar.classList.remove('active');
+                fileInput.value = '';
+
+                // Refresh list after a short delay
+                setTimeout(fetchDocuments, 3000);
+            } catch (err) {
+                showStatus('Error: ' + err.message, 'error');
+                progressBar.classList.remove('active');
+            }
+        }
+
+        // ---- Document List ----
+        async function fetchDocuments() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/documents`);
+                if (!res.ok) throw new Error('Failed to fetch documents');
+                const data = await res.json();
+                renderDocuments(data.documents || []);
+            } catch (err) {
+                documentsList.innerHTML = `<div class="empty-state"><p>Could not load documents. Check API connection.</p></div>`;
+            }
+        }
+
+        function renderDocuments(docs) {
+            if (docs.length === 0) {
+                documentsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">&#128203;</div>
+                        <p>No documents yet. Upload a resume PDF to get started.</p>
+                    </div>`;
+                return;
+            }
+
+            documentsList.innerHTML = docs.map(doc => {
+                const statusClass = (doc.status || '').toLowerCase();
+                const name = doc.candidate_name || doc.filename || 'Untitled';
+                const time = doc.upload_timestamp ? new Date(doc.upload_timestamp).toLocaleString() : '';
+                return `
+                    <div class="doc-card" onclick="viewDocument('${doc.document_id}')">
+                        <div class="doc-info">
+                            <h3>${escapeHtml(name)}</h3>
+                            <div class="meta">${escapeHtml(doc.filename)} &middot; ${time}</div>
+                        </div>
+                        <span class="status-badge ${statusClass}">${doc.status}</span>
+                    </div>`;
+            }).join('');
+        }
+
+        // ---- Document Detail ----
+        async function viewDocument(id) {
+            modalContent.innerHTML = '<div style="text-align:center;padding:40px;"><span class="loading-spinner"></span> Loading...</div>';
+            modalOverlay.classList.add('active');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/documents/${id}`);
+                if (!res.ok) throw new Error('Document not found');
+                const doc = await res.json();
+                renderDetail(doc);
+            } catch (err) {
+                modalContent.innerHTML = `<div class="error-box">Error loading document: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderDetail(doc) {
+            const d = doc.parsed_data || {};
+
+            if (doc.status === 'FAILED') {
+                modalContent.innerHTML = `
+                    <h2>${escapeHtml(doc.filename)}</h2>
+                    <div class="contact">${new Date(doc.upload_timestamp).toLocaleString()}</div>
+                    <div class="error-box">
+                        <strong>Processing Failed</strong><br>
+                        ${escapeHtml(doc.error_message || 'Unknown error')}
+                    </div>`;
+                return;
+            }
+
+            if (doc.status === 'PROCESSING') {
+                modalContent.innerHTML = `
+                    <h2>${escapeHtml(doc.filename)}</h2>
+                    <div class="contact">${new Date(doc.upload_timestamp).toLocaleString()}</div>
+                    <div style="text-align:center;padding:32px;">
+                        <span class="loading-spinner"></span>
+                        Document is still processing. Check back in a few seconds.
+                    </div>`;
+                return;
+            }
+
+            let html = `<h2>${escapeHtml(d.name || doc.filename)}</h2>`;
+
+            // Contact info
+            const contacts = [d.email, d.phone].filter(Boolean);
+            if (contacts.length) {
+                html += `<div class="contact">${contacts.map(escapeHtml).join(' &middot; ')}</div>`;
+            }
+
+            // Recruiter Summary
+            if (d.recruiter_summary) {
+                html += `
+                    <div class="detail-section">
+                        <h3>Recruiter Summary</h3>
+                        <div class="summary-box">${escapeHtml(d.recruiter_summary)}</div>
+                    </div>`;
+            }
+
+            // Skills
+            if (d.skills && d.skills.length) {
+                html += `
+                    <div class="detail-section">
+                        <h3>Skills</h3>
+                        <div class="skills-list">
+                            ${d.skills.map(s => `<span class="skill-pill">${escapeHtml(s)}</span>`).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // Work Experience
+            if (d.work_experience && d.work_experience.length) {
+                html += `<div class="detail-section"><h3>Work Experience</h3>`;
+                html += d.work_experience.map(exp => {
+                    let item = `<div class="experience-item">
+                        <div class="exp-header">
+                            <span class="exp-role">${escapeHtml(exp.role || '')}</span>
+                            <span class="exp-duration">${escapeHtml(exp.duration || '')}</span>
+                        </div>
+                        <div class="exp-company">${escapeHtml(exp.company || '')}</div>`;
+                    if (exp.highlights && exp.highlights.length) {
+                        item += `<ul class="exp-highlights">${exp.highlights.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>`;
+                    }
+                    return item + '</div>';
+                }).join('');
+                html += '</div>';
+            }
+
+            // Education
+            if (d.education && d.education.length) {
+                html += `<div class="detail-section"><h3>Education</h3>`;
+                html += d.education.map(edu => `
+                    <div class="education-item">
+                        <div class="exp-role">${escapeHtml(edu.degree || '')}</div>
+                        <div class="exp-company">${escapeHtml(edu.institution || '')}</div>
+                        <div class="exp-duration">${escapeHtml(edu.year || '')}</div>
+                    </div>`).join('');
+                html += '</div>';
+            }
+
+            modalContent.innerHTML = html;
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+        }
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // ---- Utilities ----
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ---- Auto-refresh ----
+        fetchDocuments();
+        setInterval(fetchDocuments, 10000);
+    </script>
+</body>
+</html>
