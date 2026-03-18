@@ -259,7 +259,6 @@
             background-clip: text;
             animation: iridescent 5s ease infinite;
         }
-        .hero-title .char.space { width: 0.3em; }
         @keyframes iridescent {
             0%   { background-position: 0% 50%; }
             25%  { background-position: 100% 0%; }
@@ -890,8 +889,10 @@
     (function initTitle() {
         const title = 'AI Document Intelligence Pipeline';
         const el = document.getElementById('heroTitle');
-        el.innerHTML = title.split('').map(c =>
-            c === ' ' ? '<span class="char space">&nbsp;</span>' : `<span class="char">${c}</span>`
+        el.innerHTML = title.split(' ').map(word =>
+            '<span style="display:inline-block;white-space:nowrap">' +
+            word.split('').map(c => `<span class="char">${c}</span>`).join('') +
+            '</span> '
         ).join('');
     })();
 
