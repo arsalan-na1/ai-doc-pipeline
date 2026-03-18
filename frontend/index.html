@@ -7,6 +7,133 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- GLSL fragment shader -->
+    <script id="fragShader" type="x-shader/x-fragment">
+    precision highp float;
+    uniform float uTime;
+    uniform vec2 uResolution;
+    uniform vec2 uMouse;
+
+    // Simplex-ish noise
+    vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+    vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+    vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
+    vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
+
+    float snoise(vec3 v){
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod289(i);
+        vec4 p = permute(permute(permute(
+            i.z + vec4(0.0, i1.z, i2.z, 1.0))
+          + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+          + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        float n_ = 0.142857142857;
+        vec3 ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ * ns.x + ns.yyyy;
+        vec4 y = y_ * ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 p0 = vec3(a0.xy, h.x);
+        vec3 p1 = vec3(a0.zw, h.y);
+        vec3 p2 = vec3(a1.xy, h.z);
+        vec3 p3 = vec3(a1.zw, h.w);
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+    }
+
+    float fbm(vec3 p) {
+        float v = 0.0;
+        float a = 0.5;
+        vec3 shift = vec3(100.0);
+        for (int i = 0; i < 5; i++) {
+            v += a * snoise(p);
+            p = p * 2.0 + shift;
+            a *= 0.5;
+        }
+        return v;
+    }
+
+    void main() {
+        vec2 uv = gl_FragCoord.xy / uResolution.xy;
+        vec2 p = uv * 2.0 - 1.0;
+        p.x *= uResolution.x / uResolution.y;
+
+        // Mouse influence — subtle fluid distortion
+        vec2 mouse = uMouse * 2.0 - 1.0;
+        mouse.x *= uResolution.x / uResolution.y;
+        float mouseDist = length(p - mouse);
+        vec2 mouseWarp = (p - mouse) * 0.15 / (1.0 + mouseDist * 3.0);
+
+        float t = uTime * 0.12;
+
+        // Domain warping for organic fluid look
+        vec3 q = vec3(p + mouseWarp, t);
+        float f1 = fbm(q * 1.2);
+        float f2 = fbm(q * 1.2 + vec3(f1 * 1.5, f1 * 0.8, t * 0.3));
+        float f3 = fbm(q * 0.8 + vec3(f2 * 1.2, f2 * 1.0, t * 0.15 + 5.0));
+
+        // Deep navy base
+        vec3 col = vec3(0.02, 0.02, 0.06);
+
+        // Electric blue aurora — flowing wave
+        float wave1 = smoothstep(-0.1, 0.6, f2 + 0.1);
+        col += vec3(0.05, 0.12, 0.35) * wave1 * 0.7;
+
+        // Violet aurora band
+        float wave2 = smoothstep(-0.2, 0.5, f3);
+        col += vec3(0.18, 0.04, 0.28) * wave2 * 0.6;
+
+        // Soft cyan accents in the flow
+        float wave3 = smoothstep(0.1, 0.7, f1 * 0.5 + f3 * 0.5 + 0.2);
+        col += vec3(0.03, 0.15, 0.22) * wave3 * 0.5;
+
+        // Bright aurora core — where flows converge
+        float core = smoothstep(0.3, 0.8, f2 * f3 + 0.3);
+        col += vec3(0.08, 0.18, 0.45) * core * 0.4;
+
+        // Subtle warm highlight (very faint purple-pink)
+        float highlight = smoothstep(0.4, 0.9, f1 * 0.6 + f2 * 0.4 + 0.15);
+        col += vec3(0.12, 0.02, 0.16) * highlight * 0.3;
+
+        // Mouse proximity glow — subtle
+        float mouseGlow = exp(-mouseDist * 1.5) * 0.08;
+        col += vec3(0.1, 0.12, 0.3) * mouseGlow;
+
+        // Vignette
+        float vig = 1.0 - length(uv - 0.5) * 0.8;
+        col *= vig;
+
+        // Slight film grain for texture
+        float grain = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898,78.233))) * 43758.5453) - 0.5) * 0.015;
+        col += grain;
+
+        gl_FragColor = vec4(col, 1.0);
+    }
+    </script>
+
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -41,32 +168,32 @@
             cursor: none;
         }
 
-        /* Custom cursor */
-        .cursor {
-            width: 20px; height: 20px;
-            border: 2px solid rgba(124,92,252,0.6);
+        /* Custom cursor — glowing dot + magnetic ring */
+        .cursor-ring {
+            width: 36px; height: 36px;
+            border: 1.5px solid rgba(124,92,252,0.35);
             border-radius: 50%;
             position: fixed;
             pointer-events: none;
             z-index: 10000;
-            transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s, transform 0.15s;
             transform: translate(-50%, -50%);
-            mix-blend-mode: difference;
+            transition: width 0.35s cubic-bezier(0.23,1,0.32,1), height 0.35s cubic-bezier(0.23,1,0.32,1),
+                        border-color 0.35s, background 0.35s;
         }
-        .cursor.hover {
-            width: 50px; height: 50px;
-            background: rgba(124,92,252,0.15);
-            border-color: var(--accent2);
+        .cursor-ring.hover {
+            width: 60px; height: 60px;
+            border-color: rgba(199,76,255,0.5);
+            background: rgba(124,92,252,0.06);
         }
         .cursor-dot {
-            width: 5px; height: 5px;
-            background: #fff;
+            width: 8px; height: 8px;
             border-radius: 50%;
             position: fixed;
             pointer-events: none;
             z-index: 10001;
             transform: translate(-50%, -50%);
-            transition: opacity 0.2s;
+            background: radial-gradient(circle, rgba(160,140,255,0.9) 0%, rgba(124,92,252,0.6) 50%, transparent 70%);
+            box-shadow: 0 0 12px rgba(124,92,252,0.5), 0 0 30px rgba(124,92,252,0.2);
         }
 
         /* Scrollbar */
@@ -75,11 +202,11 @@
         ::-webkit-scrollbar-thumb { background: rgba(124,92,252,0.3); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(124,92,252,0.5); }
 
-        /* Three.js canvas */
+        /* WebGL canvas */
         #bg-canvas {
             position: fixed;
             top: 0; left: 0;
-            width: 100%; height: 100%;
+            width: 100vw; height: 100vh;
             z-index: 0;
             pointer-events: none;
         }
@@ -112,24 +239,33 @@
             opacity: 0;
         }
 
+        /* Title — letters animate in individually */
         .hero-title {
             font-family: var(--font-display);
             font-size: clamp(2.5rem, 6vw, 4.5rem);
             font-weight: 800;
             line-height: 1.1;
             letter-spacing: -2px;
-            background: linear-gradient(135deg, #fff 0%, #c7d2fe 25%, var(--accent2) 50%, var(--accent3) 75%, #fff 100%);
-            background-size: 300% 300%;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .hero-title .char {
+            display: inline-block;
+            opacity: 0;
+            background: linear-gradient(135deg, #e0e7ff, #c7b5ff, #a5f3fc, #ddd6fe, #e0e7ff);
+            background-size: 400% 400%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: gradientShift 6s ease infinite;
-            margin-bottom: 20px;
-            opacity: 0;
+            animation: iridescent 5s ease infinite;
         }
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        .hero-title .char.space { width: 0.3em; }
+        @keyframes iridescent {
+            0%   { background-position: 0% 50%; }
+            25%  { background-position: 100% 0%; }
+            50%  { background-position: 100% 100%; }
+            75%  { background-position: 0% 100%; }
+            100% { background-position: 0% 50%; }
         }
 
         .hero-sub {
@@ -144,39 +280,40 @@
         /* ===== CONTAINER ===== */
         .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
 
-        /* ===== GLASS PANEL ===== */
+        /* ===== GLASS PANEL with traveling border glow ===== */
         .glass-panel {
             background: var(--surface);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        /* ===== UPLOAD SECTION ===== */
-        .upload-section {
-            padding: 36px;
-            margin-bottom: 32px;
-            opacity: 0;
+            transition: background 0.4s, border-color 0.4s, box-shadow 0.4s;
             position: relative;
             overflow: hidden;
         }
-        .upload-section::before {
+        .glass-panel::before {
             content: '';
             position: absolute;
             inset: -1px;
-            border-radius: var(--radius);
+            border-radius: inherit;
             padding: 1px;
-            background: linear-gradient(135deg, transparent, rgba(124,92,252,0.2), transparent);
+            background: conic-gradient(from var(--border-angle, 0deg), transparent 40%, rgba(124,92,252,0.4) 50%, transparent 60%);
             -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
             opacity: 0;
             transition: opacity 0.5s;
+            pointer-events: none;
         }
-        .upload-section:hover::before { opacity: 1; }
+        .glass-panel:hover::before { opacity: 1; }
+
+        /* ===== UPLOAD SECTION ===== */
+        .upload-section {
+            padding: 36px;
+            margin-bottom: 32px;
+            opacity: 0;
+        }
 
         .section-label {
             font-family: var(--font-display);
@@ -186,7 +323,7 @@
             margin-bottom: 20px;
         }
 
-        /* Upload drop zone with SVG animated border */
+        /* Drop zone with SVG animated border */
         .drop-zone-wrapper {
             position: relative;
             border-radius: 16px;
@@ -219,13 +356,12 @@
             cursor: pointer;
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
             transform-style: preserve-3d;
-            perspective: 600px;
             background: transparent;
         }
         .drop-zone-wrapper:hover .drop-zone,
         .drop-zone-wrapper.drag-over .drop-zone {
             background: rgba(124,92,252,0.05);
-            transform: translateY(-2px);
+            transform: perspective(800px) translateZ(8px);
             box-shadow: 0 20px 40px rgba(124,92,252,0.1);
         }
 
@@ -260,38 +396,7 @@
         .drop-text .browse-link:hover::after { width: 100%; }
         .drop-hint { color: rgba(107,115,148,0.6); font-size: 0.78rem; margin-top: 8px; }
 
-        /* Upload button shimmer */
-        .upload-btn {
-            display: none;
-            margin: 20px auto 0;
-            padding: 12px 32px;
-            border: none;
-            border-radius: 12px;
-            font-family: var(--font);
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #fff;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-        .upload-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.2) 45%, rgba(255,255,255,0.05) 55%, transparent 60%);
-            animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(124,92,252,0.4); }
-
-        /* Status messages */
+        /* Status */
         .upload-status {
             margin-top: 16px;
             padding: 12px 16px;
@@ -340,7 +445,7 @@
             100% { width: 0%; margin-left: 100%; background-position: 0% 0%; }
         }
 
-        /* ===== DOCUMENTS SECTION ===== */
+        /* ===== DOCUMENTS ===== */
         .documents-section { margin-bottom: 80px; opacity: 0; }
         .section-header {
             display: flex;
@@ -371,7 +476,7 @@
             box-shadow: 0 6px 20px rgba(124,92,252,0.15);
         }
 
-        /* Document cards with 3D tilt */
+        /* Doc cards — 3D tilt via JS */
         .doc-card {
             padding: 20px 24px;
             margin-bottom: 10px;
@@ -618,7 +723,6 @@
         }
         @keyframes ripple { to { transform: scale(4); opacity: 0; } }
 
-        /* Footer */
         .footer {
             text-align: center;
             padding: 40px 20px 30px;
@@ -637,10 +741,10 @@
 </head>
 <body>
     <!-- Custom cursor -->
-    <div class="cursor" id="cursor"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
     <div class="cursor-dot" id="cursorDot"></div>
 
-    <!-- Three.js background -->
+    <!-- WebGL shader background -->
     <canvas id="bg-canvas"></canvas>
 
     <div class="page-content">
@@ -648,7 +752,7 @@
         <section class="hero">
             <div class="hero-inner">
                 <div class="hero-badge">Serverless AI Pipeline</div>
-                <h1 class="hero-title">AI Document Intelligence Pipeline</h1>
+                <h1 class="hero-title" id="heroTitle"></h1>
                 <p class="hero-sub">Upload a resume PDF, get structured data back in seconds. Powered by GPT-4o-mini on AWS Free Tier.</p>
             </div>
         </section>
@@ -693,6 +797,8 @@
         </div>
     </div>
 
+    <!-- Three.js for WebGL shader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- GSAP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -702,9 +808,9 @@
     const API_BASE_URL = '__API_BASE_URL__';
 
     // ======== CUSTOM CURSOR ========
-    const cursor = document.getElementById('cursor');
+    const cursorRing = document.getElementById('cursorRing');
     const cursorDot = document.getElementById('cursorDot');
-    let mouseX = 0, mouseY = 0, curX = 0, curY = 0;
+    let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
 
     document.addEventListener('mousemove', e => {
         mouseX = e.clientX;
@@ -713,258 +819,99 @@
         cursorDot.style.top = mouseY + 'px';
     });
 
-    function animateCursor() {
-        curX += (mouseX - curX) * 0.15;
-        curY += (mouseY - curY) * 0.15;
-        cursor.style.left = curX + 'px';
-        cursor.style.top = curY + 'px';
-        requestAnimationFrame(animateCursor);
-    }
-    animateCursor();
+    (function animateRing() {
+        ringX += (mouseX - ringX) * 0.12;
+        ringY += (mouseY - ringY) * 0.12;
+        cursorRing.style.left = ringX + 'px';
+        cursorRing.style.top = ringY + 'px';
+        requestAnimationFrame(animateRing);
+    })();
 
     document.addEventListener('mouseover', e => {
-        const t = e.target;
-        if (t.closest('button, .doc-card, .browse-link, .drop-zone, .skill-pill, .refresh-btn, a')) {
-            cursor.classList.add('hover');
-        }
+        if (e.target.closest('button, .doc-card, .browse-link, .drop-zone, .skill-pill, .refresh-btn, a'))
+            cursorRing.classList.add('hover');
     });
     document.addEventListener('mouseout', e => {
-        const t = e.target;
-        if (t.closest('button, .doc-card, .browse-link, .drop-zone, .skill-pill, .refresh-btn, a')) {
-            cursor.classList.remove('hover');
-        }
+        if (e.target.closest('button, .doc-card, .browse-link, .drop-zone, .skill-pill, .refresh-btn, a'))
+            cursorRing.classList.remove('hover');
     });
 
-    // ======== THREE.JS BACKGROUND ========
-    (function initNeuralNetwork() {
+    // ======== WEBGL FLUID SHADER ========
+    (function initShader() {
         const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let W, H;
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
-        function resize() {
-            W = canvas.width = window.innerWidth;
-            H = canvas.height = window.innerHeight;
-        }
-        resize();
-        window.addEventListener('resize', resize);
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-        // Mouse tracking for parallax
-        let mousePX = 0, mousePY = 0, scrollY = 0;
-        document.addEventListener('mousemove', e => {
-            mousePX = (e.clientX / W - 0.5) * 2;
-            mousePY = (e.clientY / H - 0.5) * 2;
+        const uniforms = {
+            uTime: { value: 0 },
+            uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+            uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+        };
+
+        const fragSource = document.getElementById('fragShader').textContent;
+
+        const mat = new THREE.ShaderMaterial({
+            uniforms,
+            vertexShader: 'void main(){ gl_Position = vec4(position, 1.0); }',
+            fragmentShader: fragSource,
         });
-        window.addEventListener('scroll', () => { scrollY = window.scrollY; });
 
-        // Color palette — deep blue/purple with occasional cyan
-        const nodeColors = [
-            { r: 60, g: 50, b: 160 },   // deep indigo
-            { r: 45, g: 40, b: 130 },    // darker blue
-            { r: 80, g: 60, b: 180 },    // purple-blue
-            { r: 50, g: 70, b: 150 },    // muted blue
-            { r: 40, g: 150, b: 170 },   // teal accent (rare)
-            { r: 70, g: 130, b: 180 },   // steel cyan
-        ];
+        const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+        scene.add(quad);
 
-        // Generate network nodes
-        const NODE_COUNT = 90;
-        const nodes = [];
-        for (let i = 0; i < NODE_COUNT; i++) {
-            const col = nodeColors[i < NODE_COUNT * 0.15 ? 4 + Math.floor(Math.random() * 2) : Math.floor(Math.random() * 4)];
-            nodes.push({
-                x: Math.random() * W,
-                y: Math.random() * H,
-                baseX: 0, baseY: 0, // set after
-                vx: (Math.random() - 0.5) * 0.15,
-                vy: (Math.random() - 0.5) * 0.15,
-                radius: 1.5 + Math.random() * 2,
-                color: col,
-                pulsePhase: Math.random() * Math.PI * 2,
-                pulseSpeed: 0.3 + Math.random() * 0.5,
-                breathPhase: Math.random() * Math.PI * 2,
-                breathAmpX: 8 + Math.random() * 20,
-                breathAmpY: 8 + Math.random() * 20,
-                breathSpeed: 0.15 + Math.random() * 0.25,
-            });
-            nodes[nodes.length - 1].baseX = nodes[nodes.length - 1].x;
-            nodes[nodes.length - 1].baseY = nodes[nodes.length - 1].y;
-        }
-
-        // Build connections — each node connects to nearest neighbors within range
-        const CONNECTION_DIST = 220;
-        const connections = [];
-        for (let i = 0; i < NODE_COUNT; i++) {
-            for (let j = i + 1; j < NODE_COUNT; j++) {
-                const dx = nodes[i].baseX - nodes[j].baseX;
-                const dy = nodes[i].baseY - nodes[j].baseY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < CONNECTION_DIST) {
-                    connections.push({
-                        a: i, b: j, dist,
-                        pulseOffset: Math.random() * Math.PI * 2,
-                        pulseSpeed: 0.4 + Math.random() * 0.8,
-                        active: Math.random() < 0.6, // not all connections pulse
-                    });
-                }
-            }
-        }
-
-        // Data pulses — lights that travel along connections
-        const MAX_PULSES = 18;
-        const pulses = [];
-
-        function spawnPulse() {
-            if (pulses.length >= MAX_PULSES || connections.length === 0) return;
-            const conn = connections[Math.floor(Math.random() * connections.length)];
-            if (!conn.active) return;
-            const isCyan = Math.random() < 0.2;
-            pulses.push({
-                conn,
-                t: 0,
-                speed: 0.004 + Math.random() * 0.008,
-                forward: Math.random() < 0.5,
-                color: isCyan
-                    ? { r: 80, g: 200, b: 220 }
-                    : { r: 100 + Math.random() * 40, g: 80 + Math.random() * 30, b: 200 + Math.random() * 55 },
-                size: 2 + Math.random() * 2,
-                glowSize: 12 + Math.random() * 10,
-            });
-        }
-
-        // Spawn initial pulses
-        for (let i = 0; i < 10; i++) spawnPulse();
+        // Smooth mouse tracking for the shader
+        let shaderMX = 0.5, shaderMY = 0.5;
+        document.addEventListener('mousemove', e => {
+            shaderMX = e.clientX / window.innerWidth;
+            shaderMY = 1.0 - e.clientY / window.innerHeight; // flip Y for GL
+        });
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now() * 0.001;
-
-            ctx.clearRect(0, 0, W, H);
-
-            // Parallax offset from mouse
-            const parallaxX = mousePX * 12;
-            const parallaxY = mousePY * 8 + scrollY * 0.03;
-
-            // Update node positions (gentle breathing motion)
-            for (const n of nodes) {
-                const breath = time * n.breathSpeed + n.breathPhase;
-                n.x = n.baseX + Math.sin(breath) * n.breathAmpX + parallaxX;
-                n.y = n.baseY + Math.cos(breath * 0.7) * n.breathAmpY + parallaxY;
-            }
-
-            // Draw connections
-            for (const conn of connections) {
-                const a = nodes[conn.a];
-                const b = nodes[conn.b];
-                const dx = a.x - b.x;
-                const dy = a.y - b.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                // Fade out connections that stretch too far
-                const maxDist = CONNECTION_DIST * 1.3;
-                if (dist > maxDist) continue;
-                const distFade = 1 - (dist / maxDist);
-
-                // Base connection line — very subtle
-                const baseAlpha = 0.04 + distFade * 0.04;
-                ctx.beginPath();
-                ctx.moveTo(a.x, a.y);
-                ctx.lineTo(b.x, b.y);
-                ctx.strokeStyle = `rgba(70, 60, 150, ${baseAlpha})`;
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-
-                // Pulsing glow on the line — breathing effect
-                if (conn.active) {
-                    const pulse = Math.sin(time * conn.pulseSpeed + conn.pulseOffset);
-                    const pulseAlpha = (0.02 + pulse * 0.03) * distFade;
-                    if (pulseAlpha > 0) {
-                        ctx.beginPath();
-                        ctx.moveTo(a.x, a.y);
-                        ctx.lineTo(b.x, b.y);
-                        ctx.strokeStyle = `rgba(90, 80, 180, ${pulseAlpha})`;
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            // Draw and update data pulses
-            for (let i = pulses.length - 1; i >= 0; i--) {
-                const p = pulses[i];
-                p.t += p.speed;
-
-                if (p.t >= 1) {
-                    pulses.splice(i, 1);
-                    continue;
-                }
-
-                const t = p.forward ? p.t : 1 - p.t;
-                const a = nodes[p.conn.a];
-                const b = nodes[p.conn.b];
-                const px = a.x + (b.x - a.x) * t;
-                const py = a.y + (b.y - a.y) * t;
-
-                // Fade in/out at edges
-                const edgeFade = Math.min(p.t * 5, (1 - p.t) * 5, 1);
-
-                // Outer glow
-                const grd = ctx.createRadialGradient(px, py, 0, px, py, p.glowSize);
-                grd.addColorStop(0, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${0.25 * edgeFade})`);
-                grd.addColorStop(0.4, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${0.06 * edgeFade})`);
-                grd.addColorStop(1, `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, 0)`);
-                ctx.beginPath();
-                ctx.arc(px, py, p.glowSize, 0, Math.PI * 2);
-                ctx.fillStyle = grd;
-                ctx.fill();
-
-                // Core dot
-                ctx.beginPath();
-                ctx.arc(px, py, p.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${p.color.r + 60}, ${p.color.g + 60}, ${p.color.b + 40}, ${0.8 * edgeFade})`;
-                ctx.fill();
-            }
-
-            // Spawn new pulses periodically
-            if (Math.random() < 0.03) spawnPulse();
-
-            // Draw nodes
-            for (const n of nodes) {
-                const pulse = Math.sin(time * n.pulseSpeed + n.pulsePhase);
-                const glowAlpha = 0.08 + pulse * 0.05;
-                const coreAlpha = 0.3 + pulse * 0.15;
-                const r = n.radius + pulse * 0.4;
-
-                // Node glow
-                const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 6);
-                grd.addColorStop(0, `rgba(${n.color.r + 40}, ${n.color.g + 40}, ${n.color.b + 40}, ${glowAlpha})`);
-                grd.addColorStop(0.5, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${glowAlpha * 0.3})`);
-                grd.addColorStop(1, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, 0)`);
-                ctx.beginPath();
-                ctx.arc(n.x, n.y, r * 6, 0, Math.PI * 2);
-                ctx.fillStyle = grd;
-                ctx.fill();
-
-                // Node core
-                ctx.beginPath();
-                ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${n.color.r + 80}, ${n.color.g + 80}, ${n.color.b + 60}, ${coreAlpha})`;
-                ctx.fill();
-            }
+            uniforms.uTime.value = performance.now() * 0.001;
+            // Smooth mouse lerp
+            uniforms.uMouse.value.x += (shaderMX - uniforms.uMouse.value.x) * 0.05;
+            uniforms.uMouse.value.y += (shaderMY - uniforms.uMouse.value.y) * 0.05;
+            renderer.render(scene, camera);
         }
-
         animate();
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+        });
+    })();
+
+    // ======== HERO TITLE — letter-by-letter animation ========
+    (function initTitle() {
+        const title = 'AI Document Intelligence Pipeline';
+        const el = document.getElementById('heroTitle');
+        el.innerHTML = title.split('').map(c =>
+            c === ' ' ? '<span class="char space">&nbsp;</span>' : `<span class="char">${c}</span>`
+        ).join('');
     })();
 
     // ======== GSAP ANIMATIONS ========
     gsap.registerPlugin(ScrollTrigger);
 
-    // Hero entrance
-    gsap.to('.hero-badge', { opacity: 1, y: 0, duration: 0.8, delay: 0.3, ease: 'power3.out', from: { y: 20 } });
-    gsap.fromTo('.hero-badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, delay: 0.3, ease: 'power3.out' });
-    gsap.fromTo('.hero-title', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1, delay: 0.5, ease: 'power3.out' });
-    gsap.fromTo('.hero-sub', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, delay: 0.8, ease: 'power3.out' });
+    // Hero entrance — badge, then letters stagger, then subtitle
+    gsap.fromTo('.hero-badge', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, delay: 0.2, ease: 'power3.out' });
 
-    // Sections fade in on scroll
+    gsap.fromTo('.hero-title .char', { y: 40, opacity: 0 }, {
+        y: 0, opacity: 1,
+        duration: 0.5,
+        stagger: 0.025,
+        delay: 0.5,
+        ease: 'back.out(1.2)',
+    });
+
+    gsap.fromTo('.hero-sub', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, delay: 1.6, ease: 'power3.out' });
+
+    // Sections
     gsap.fromTo('.upload-section', { y: 40, opacity: 0 }, {
         y: 0, opacity: 1, duration: 0.8, ease: 'power3.out',
         scrollTrigger: { trigger: '.upload-section', start: 'top 85%' }
@@ -979,30 +926,40 @@
         const rect = document.querySelector('.drop-zone-border rect');
         if (!rect) return;
         let offset = 0;
-        function tick() {
-            offset -= 0.4;
-            rect.style.strokeDashoffset = offset;
-            requestAnimationFrame(tick);
-        }
-        tick();
+        (function tick() { offset -= 0.4; rect.style.strokeDashoffset = offset; requestAnimationFrame(tick); })();
     })();
 
-    // ======== 3D TILT ON CARDS ========
+    // Traveling border glow angle animation
+    (function animateBorderAngles() {
+        let angle = 0;
+        (function tick() {
+            angle += 0.5;
+            document.querySelectorAll('.glass-panel').forEach(el => {
+                el.style.setProperty('--border-angle', angle + 'deg');
+            });
+            requestAnimationFrame(tick);
+        })();
+    })();
+
+    // ======== 3D TILT ON CARDS — max 10 degrees ========
     function addTilt(el) {
         el.addEventListener('mousemove', e => {
             const rect = el.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width - 0.5;
             const y = (e.clientY - rect.top) / rect.height - 0.5;
-            el.style.transform = `perspective(600px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) scale(1.01)`;
+            el.style.transform = `perspective(600px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg) scale(1.01)`;
         });
         el.addEventListener('mouseleave', () => {
+            gsap.to(el, { rotateY: 0, rotateX: 0, scale: 1, duration: 0.5, ease: 'power3.out',
+                onUpdate() {}, clearProps: 'transform',
+            });
             el.style.transform = 'perspective(600px) rotateY(0) rotateX(0) scale(1)';
         });
     }
 
-    // Ripple on buttons
+    // Ripple
     document.addEventListener('click', e => {
-        const btn = e.target.closest('.refresh-btn, .modal-close, .upload-btn');
+        const btn = e.target.closest('.refresh-btn, .modal-close');
         if (!btn) return;
         const ripple = document.createElement('span');
         ripple.classList.add('ripple-effect');
@@ -1102,7 +1059,6 @@
             </div>`;
         }).join('');
 
-        // Animate cards in
         document.querySelectorAll('.doc-card').forEach((card, i) => {
             gsap.fromTo(card, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, delay: i * 0.08, ease: 'power3.out' });
             addTilt(card);
@@ -1165,7 +1121,6 @@
 
         modalContent.innerHTML = h;
 
-        // Animate skill pills with spring stagger
         document.querySelectorAll('.skill-pill[data-i]').forEach(pill => {
             const i = parseInt(pill.dataset.i);
             gsap.fromTo(pill, { y: 15, opacity: 0, scale: 0.85 }, {
