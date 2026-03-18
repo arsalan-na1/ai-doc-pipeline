@@ -9,6 +9,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# On Git Bash (MSYS), convert paths for file:// and fileb:// references
+if [[ "${OSTYPE:-}" == "msys" ]] || [[ "${OSTYPE:-}" == "mingw"* ]]; then
+    FILE_PREFIX="$(cygpath -w "$SCRIPT_DIR" | sed 's|\\|/|g')"
+    PROJECT_FILE_PREFIX="$(cygpath -w "$PROJECT_DIR" | sed 's|\\|/|g')"
+else
+    FILE_PREFIX="$SCRIPT_DIR"
+    PROJECT_FILE_PREFIX="$PROJECT_DIR"
+fi
+
 echo "============================================="
 echo "  AI Document Intelligence Pipeline"
 echo "  Full Stack Deployment"
@@ -126,7 +135,7 @@ if aws iam get-role --role-name "$ROLE_NAME" > /dev/null 2>&1; then
 else
     ROLE_ARN=$(aws iam create-role \
         --role-name "$ROLE_NAME" \
-        --assume-role-policy-document file://"$SCRIPT_DIR/trust-policy.json" \
+        --assume-role-policy-document "file://$FILE_PREFIX/trust-policy.json" \
         --query 'Role.Arn' --output text)
     echo "  Created role: $ROLE_NAME"
 fi
@@ -196,6 +205,7 @@ echo "[Step 5/11] Publishing Lambda Layer..."
 echo "========================================="
 
 LAYER_ZIP="$PROJECT_DIR/lambda/layer/lambda-layer.zip"
+LAYER_ZIP_WIN="$PROJECT_FILE_PREFIX/lambda/layer/lambda-layer.zip"
 if [ ! -f "$LAYER_ZIP" ]; then
     echo "  [!] Layer zip not found at: $LAYER_ZIP"
     echo "  Run 'bash lambda/layer/build_layer.sh' first to build the layer."
@@ -205,7 +215,7 @@ fi
 LAYER_VERSION_ARN=$(aws lambda publish-layer-version \
     --layer-name "$LAYER_NAME" \
     --compatible-runtimes python3.11 \
-    --zip-file fileb://"$LAYER_ZIP" \
+    --zip-file "fileb://$LAYER_ZIP_WIN" \
     --region "$AWS_REGION" \
     --query 'LayerVersionArn' --output text)
 echo "  Published layer: $LAYER_VERSION_ARN"
@@ -219,14 +229,15 @@ echo "[Step 6/11] Deploying document processor Lambda..."
 echo "========================================="
 
 PROCESSOR_ZIP="$SCRIPT_DIR/processor.zip"
+PROCESSOR_ZIP_WIN="$FILE_PREFIX/processor.zip"
 cd "$PROJECT_DIR/lambda/document_processor"
-zip -r9 "$PROCESSOR_ZIP" . > /dev/null
+powershell -Command "Compress-Archive -Path '*' -DestinationPath '$PROCESSOR_ZIP_WIN' -Force" > /dev/null
 cd "$PROJECT_DIR"
 
 if aws lambda get-function --function-name "$PROCESSOR_FUNCTION" --region "$AWS_REGION" > /dev/null 2>&1; then
     aws lambda update-function-code \
         --function-name "$PROCESSOR_FUNCTION" \
-        --zip-file fileb://"$PROCESSOR_ZIP" \
+        --zip-file "fileb://$PROCESSOR_ZIP_WIN" \
         --region "$AWS_REGION" > /dev/null
     echo "  Updated function code: $PROCESSOR_FUNCTION"
 else
@@ -235,7 +246,7 @@ else
         --runtime python3.11 \
         --handler lambda_function.lambda_handler \
         --role "$ROLE_ARN" \
-        --zip-file fileb://"$PROCESSOR_ZIP" \
+        --zip-file "fileb://$PROCESSOR_ZIP_WIN" \
         --timeout 60 \
         --memory-size 512 \
         --layers "$LAYER_VERSION_ARN" \
@@ -301,14 +312,15 @@ echo "[Step 8/11] Deploying results API Lambda..."
 echo "========================================="
 
 API_ZIP="$SCRIPT_DIR/api.zip"
+API_ZIP_WIN="$FILE_PREFIX/api.zip"
 cd "$PROJECT_DIR/lambda/results_api"
-zip -r9 "$API_ZIP" . > /dev/null
+powershell -Command "Compress-Archive -Path '*' -DestinationPath '$API_ZIP_WIN' -Force" > /dev/null
 cd "$PROJECT_DIR"
 
 if aws lambda get-function --function-name "$API_FUNCTION" --region "$AWS_REGION" > /dev/null 2>&1; then
     aws lambda update-function-code \
         --function-name "$API_FUNCTION" \
-        --zip-file fileb://"$API_ZIP" \
+        --zip-file "fileb://$API_ZIP_WIN" \
         --region "$AWS_REGION" > /dev/null
     echo "  Updated function code: $API_FUNCTION"
 else
@@ -317,7 +329,7 @@ else
         --runtime python3.11 \
         --handler lambda_function.lambda_handler \
         --role "$ROLE_ARN" \
-        --zip-file fileb://"$API_ZIP" \
+        --zip-file "fileb://$API_ZIP_WIN" \
         --timeout 10 \
         --memory-size 128 \
         --environment "Variables={DYNAMODB_TABLE=$DYNAMODB_TABLE_NAME,S3_BUCKET=$S3_BUCKET_NAME}" \
@@ -528,10 +540,11 @@ aws s3api put-bucket-policy --bucket "$S3_FRONTEND_BUCKET_NAME" --policy "$BUCKE
 FRONTEND_FILE="$PROJECT_DIR/frontend/index.html"
 if [ -f "$FRONTEND_FILE" ]; then
     # Replace placeholder API URL with actual URL
-    sed "s|__API_BASE_URL__|$API_URL|g" "$FRONTEND_FILE" > /tmp/index.html
-    aws s3 cp /tmp/index.html "s3://$S3_FRONTEND_BUCKET_NAME/index.html" \
+    TEMP_HTML="$SCRIPT_DIR/_index_tmp.html"
+    sed "s|__API_BASE_URL__|$API_URL|g" "$FRONTEND_FILE" > "$TEMP_HTML"
+    aws s3 cp "$TEMP_HTML" "s3://$S3_FRONTEND_BUCKET_NAME/index.html" \
         --content-type "text/html"
-    rm /tmp/index.html
+    rm -f "$TEMP_HTML"
     echo "  Frontend uploaded with API URL injected."
 else
     echo "  [!] Frontend file not found at: $FRONTEND_FILE"

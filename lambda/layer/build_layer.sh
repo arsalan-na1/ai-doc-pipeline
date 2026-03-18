@@ -18,21 +18,34 @@ echo "========================================="
 # Clean previous builds
 rm -rf "$SCRIPT_DIR/python" "$OUTPUT_ZIP"
 
-# Check if Docker is available
+# Convert Git Bash path to Windows path for Docker volume mount
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "mingw"* ]]; then
+    # Windows (Git Bash / MSYS2) - convert /c/Users/... to C:/Users/...
+    DOCKER_MOUNT_DIR="$(cygpath -w "$SCRIPT_DIR")"
+else
+    DOCKER_MOUNT_DIR="$SCRIPT_DIR"
+fi
+
 if command -v docker &> /dev/null; then
     echo ""
-    echo "[1/3] Building with Docker (Amazon Linux 2023)..."
-    docker run --rm -v "$SCRIPT_DIR":/out public.ecr.aws/lambda/python:$PYTHON_VERSION bash -c "
-        pip install --no-cache-dir \
+    echo "[1/3] Building with Docker (Lambda Python 3.11 image)..."
+    MSYS_NO_PATHCONV=1 docker run --rm --entrypoint bash \
+        -v "${DOCKER_MOUNT_DIR}:/out" \
+        public.ecr.aws/lambda/python:$PYTHON_VERSION -c "
+        yum install -y zip > /dev/null 2>&1
+        pip install --no-cache-dir --only-binary=:all: \
             PyMuPDF==1.25.3 \
             pdfplumber==0.11.4 \
-            openai==1.68.0 \
+            'openai>=1.60.0,<2' \
             -t /out/python/lib/python${PYTHON_VERSION}/site-packages/
+        # Remove numpy - openai lists it as optional and we don't need it
+        rm -rf /out/python/lib/python${PYTHON_VERSION}/site-packages/numpy*
         # Remove unnecessary files to reduce size
         find /out/python -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
         find /out/python -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
         find /out/python -type d -name 'tests' -exec rm -rf {} + 2>/dev/null || true
         find /out/python -name '*.pyc' -delete 2>/dev/null || true
+        cd /out && zip -r9 lambda-layer.zip python/
     "
 else
     echo ""
@@ -43,39 +56,37 @@ else
     pip install --no-cache-dir \
         PyMuPDF==1.25.3 \
         pdfplumber==0.11.4 \
-        openai==1.68.0 \
+        'openai>=1.60.0,<2' \
+        'numpy<2.1' \
         -t "$SCRIPT_DIR/python/lib/python${PYTHON_VERSION}/site-packages/" \
         --platform manylinux2014_x86_64 \
         --only-binary=:all:
+    cd "$SCRIPT_DIR"
+    zip -r9 "$OUTPUT_ZIP" python/
 fi
 
 echo ""
-echo "[2/3] Creating zip archive..."
-cd "$SCRIPT_DIR"
-zip -r9 "$OUTPUT_ZIP" python/
+echo "[2/3] Verifying..."
+if [ -f "$OUTPUT_ZIP" ]; then
+    ZIP_SIZE=$(du -sh "$OUTPUT_ZIP" | cut -f1)
+    echo "  Output: $OUTPUT_ZIP"
+    echo "  Size:   $ZIP_SIZE"
+else
+    echo "  [ERROR] lambda-layer.zip was not created!"
+    exit 1
+fi
 
 echo ""
-echo "[3/3] Verifying..."
-ZIP_SIZE=$(du -sh "$OUTPUT_ZIP" | cut -f1)
-echo "  Output: $OUTPUT_ZIP"
-echo "  Size:   $ZIP_SIZE"
-echo ""
-
-# Check size limits
 ZIP_BYTES=$(wc -c < "$OUTPUT_ZIP")
 if [ "$ZIP_BYTES" -gt 52428800 ]; then
     echo "  WARNING: Zip exceeds 50MB Lambda Layer limit!"
-    echo "  Consider removing unused packages or using a smaller subset."
+    echo "  Consider removing unused packages."
 else
-    echo "  Layer is within the 50MB Lambda limit."
+    echo "  [3/3] Layer is within the 50MB Lambda limit. Ready to deploy."
 fi
-
-echo ""
-echo "Done! Upload with:"
-echo "  aws lambda publish-layer-version \\"
-echo "    --layer-name ai-doc-pipeline-deps \\"
-echo "    --compatible-runtimes python${PYTHON_VERSION} \\"
-echo "    --zip-file fileb://$OUTPUT_ZIP"
 
 # Clean up extracted directory
 rm -rf "$SCRIPT_DIR/python"
+
+echo ""
+echo "Done!"
