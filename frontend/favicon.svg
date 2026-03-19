@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="blur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
+    </filter>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#0a0a1a"/>
+  <!-- Glow layer -->
+  <g filter="url(#blur)" opacity="0.6">
+    <path d="M9 6h10l5 5v15a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2z" fill="url(#glow)"/>
+  </g>
+  <!-- Document icon -->
+  <path d="M9 6h10l5 5v15a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2z" fill="none" stroke="url(#glow)" stroke-width="1.5"/>
+  <path d="M19 6v5h5" fill="none" stroke="url(#glow)" stroke-width="1.5"/>
+  <!-- AI brain dots -->
+  <circle cx="13" cy="17" r="1.2" fill="#00f0ff"/>
+  <circle cx="19" cy="17" r="1.2" fill="#a855f7"/>
+  <circle cx="16" cy="14" r="1.2" fill="#00f0ff" opacity="0.8"/>
+  <circle cx="16" cy="20" r="1.2" fill="#a855f7" opacity="0.8"/>
+  <line x1="13" y1="17" x2="16" y2="14" stroke="#00f0ff" stroke-width="0.7" opacity="0.5"/>
+  <line x1="19" y1="17" x2="16" y2="14" stroke="#a855f7" stroke-width="0.7" opacity="0.5"/>
+  <line x1="13" y1="17" x2="16" y2="20" stroke="#00f0ff" stroke-width="0.7" opacity="0.5"/>
+  <line x1="19" y1="17" x2="16" y2="20" stroke="#a855f7" stroke-width="0.7" opacity="0.5"/>
+</svg>
