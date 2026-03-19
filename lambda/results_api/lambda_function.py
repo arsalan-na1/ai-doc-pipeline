@@ -50,10 +50,10 @@ def response(status_code, body):
     }
 
 
-def get_upload_url():
+def get_upload_url(session_id):
     """Generate a presigned S3 PUT URL for PDF upload."""
     file_id = str(uuid.uuid4())
-    key = f"uploads/{file_id}.pdf"
+    key = f"uploads/{session_id}/{file_id}.pdf"
 
     presigned_url = s3_client.generate_presigned_url(
         "put_object",
@@ -69,9 +69,17 @@ def get_upload_url():
     return response(200, {"upload_url": presigned_url, "document_key": key, "file_id": file_id})
 
 
-def list_documents():
-    """List all processed documents from DynamoDB."""
-    result = table.scan(Limit=50)
+def list_documents(session_id):
+    """List documents for a specific session from DynamoDB."""
+    if not session_id:
+        return response(200, {"documents": [], "count": 0})
+
+    result = table.query(
+        IndexName="session_id-index",
+        KeyConditionExpression="session_id = :sid",
+        ExpressionAttributeValues={":sid": session_id},
+        Limit=50,
+    )
     items = result.get("Items", [])
 
     # Sort by upload timestamp descending
@@ -116,17 +124,22 @@ def lambda_handler(event, context):
     http_method = event.get("httpMethod", "")
     path = event.get("path", "")
     path_params = event.get("pathParameters") or {}
+    query_params = event.get("queryStringParameters") or {}
 
     # Handle CORS preflight
     if http_method == "OPTIONS":
         return response(200, {})
 
     try:
+        session_id = query_params.get("session_id", "")
+
         if http_method == "GET":
             if path == "/upload-url":
-                return get_upload_url()
+                if not session_id:
+                    return response(400, {"error": "session_id is required"})
+                return get_upload_url(session_id)
             elif path == "/documents":
-                return list_documents()
+                return list_documents(session_id)
             elif path.startswith("/documents/") and path_params.get("id"):
                 return get_document(path_params["id"])
             else:

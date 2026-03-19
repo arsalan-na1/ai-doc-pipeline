@@ -119,6 +119,16 @@ else
     echo "  Waiting for table to become active..."
     aws dynamodb wait table-exists --table-name "$DYNAMODB_TABLE_NAME" --region "$AWS_REGION"
     echo "  Table is active."
+
+    # Add GSI for session-based document isolation
+    aws dynamodb update-table \
+        --table-name "$DYNAMODB_TABLE_NAME" \
+        --attribute-definitions AttributeName=session_id,AttributeType=S \
+        --global-secondary-index-updates '[{"Create":{"IndexName":"session_id-index","KeySchema":[{"AttributeName":"session_id","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}}]' \
+        --region "$AWS_REGION" > /dev/null
+    echo "  Created GSI: session_id-index"
+    echo "  Waiting for GSI to become active..."
+    aws dynamodb wait table-exists --table-name "$DYNAMODB_TABLE_NAME" --region "$AWS_REGION"
 fi
 
 # ============================================================================
@@ -170,9 +180,13 @@ POLICY_DOC=$(cat <<EOF
       "Action": [
         "dynamodb:PutItem",
         "dynamodb:GetItem",
-        "dynamodb:Scan"
+        "dynamodb:Scan",
+        "dynamodb:Query"
       ],
-      "Resource": "arn:aws:dynamodb:${AWS_REGION}:${AWS_ACCOUNT_ID}:table/${DYNAMODB_TABLE_NAME}"
+      "Resource": [
+        "arn:aws:dynamodb:${AWS_REGION}:${AWS_ACCOUNT_ID}:table/${DYNAMODB_TABLE_NAME}",
+        "arn:aws:dynamodb:${AWS_REGION}:${AWS_ACCOUNT_ID}:table/${DYNAMODB_TABLE_NAME}/index/*"
+      ]
     },
     {
       "Sid": "SSMAccess",

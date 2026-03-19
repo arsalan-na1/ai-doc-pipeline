@@ -1075,6 +1075,17 @@
     // ======== CONFIG ========
     const API_BASE_URL = '__API_BASE_URL__';
 
+    // ======== SESSION ID ========
+    function getSessionId() {
+        let sid = localStorage.getItem('pipeline_session_id');
+        if (!sid) {
+            sid = crypto.randomUUID();
+            localStorage.setItem('pipeline_session_id', sid);
+        }
+        return sid;
+    }
+    const SESSION_ID = getSessionId();
+
     // ======== CUSTOM CURSOR ========
     const cursorRing = document.getElementById('cursorRing');
     const cursorDot = document.getElementById('cursorDot');
@@ -1280,7 +1291,7 @@
         progressBar.classList.add('active');
 
         try {
-            const urlRes = await fetch(`${API_BASE_URL}/upload-url`);
+            const urlRes = await fetch(`${API_BASE_URL}/upload-url?session_id=${SESSION_ID}`);
             if (!urlRes.ok) throw new Error('Failed to get upload URL');
             const { upload_url } = await urlRes.json();
 
@@ -1306,7 +1317,7 @@
 
     async function fetchDocuments() {
         try {
-            const res = await fetch(`${API_BASE_URL}/documents`);
+            const res = await fetch(`${API_BASE_URL}/documents?session_id=${SESSION_ID}`);
             if (!res.ok) throw new Error('Failed');
             const data = await res.json();
             renderDocuments(data.documents || []);

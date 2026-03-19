@@ -129,7 +129,7 @@ def analyze_resume_with_llm(text, api_key):
     return result
 
 
-def store_results(document_id, filename, status, parsed_data=None, extracted_text="", error_message=None):
+def store_results(document_id, filename, status, session_id="", parsed_data=None, extracted_text="", error_message=None):
     """Store processing results in DynamoDB."""
     item = {
         "document_id": document_id,
@@ -138,6 +138,9 @@ def store_results(document_id, filename, status, parsed_data=None, extracted_tex
         "status": status,
         "extracted_text_preview": extracted_text[:500] if extracted_text else "",
     }
+
+    if session_id:
+        item["session_id"] = session_id
 
     if parsed_data:
         # Convert any floats to Decimal for DynamoDB compatibility
@@ -166,12 +169,17 @@ def lambda_handler(event, context):
             logger.warning("Skipping non-PDF file: %s", key)
             return {"statusCode": 200, "body": "Skipped non-PDF file"}
 
+        # Extract session_id from key path: uploads/{session_id}/{file_id}.pdf
+        key_parts = key.split("/")
+        session_id = key_parts[1] if len(key_parts) >= 3 else ""
+        logger.info("Session ID: %s", session_id)
+
         # Generate document ID from S3 key
         document_id = hashlib.sha256(f"{bucket}/{key}".encode()).hexdigest()[:16]
         logger.info("Processing document: %s (id: %s)", filename, document_id)
 
         # Store initial processing status
-        store_results(document_id, filename, "PROCESSING")
+        store_results(document_id, filename, "PROCESSING", session_id=session_id)
 
         # Download PDF from S3
         response = s3_client.get_object(Bucket=bucket, Key=key)
@@ -181,7 +189,7 @@ def lambda_handler(event, context):
         # Extract text
         extracted_text = extract_text_from_pdf(pdf_bytes)
         if not extracted_text.strip():
-            store_results(document_id, filename, "FAILED",
+            store_results(document_id, filename, "FAILED", session_id=session_id,
                          error_message="Could not extract text from PDF. The file may be scanned/image-based.")
             return {"statusCode": 200, "body": "No text extracted"}
 
@@ -190,7 +198,7 @@ def lambda_handler(event, context):
         parsed_data = analyze_resume_with_llm(extracted_text, api_key)
 
         # Store successful results
-        store_results(document_id, filename, "COMPLETED",
+        store_results(document_id, filename, "COMPLETED", session_id=session_id,
                      parsed_data=parsed_data, extracted_text=extracted_text)
 
         logger.info("Document processing completed successfully: %s", document_id)
@@ -202,7 +210,7 @@ def lambda_handler(event, context):
         # Attempt to store failure status
         try:
             if "document_id" in dir() and "filename" in dir():
-                store_results(document_id, filename, "FAILED", error_message=str(e))
+                store_results(document_id, filename, "FAILED", session_id=session_id if "session_id" in dir() else "", error_message=str(e))
         except Exception:
             logger.error("Failed to store error status in DynamoDB", exc_info=True)
 
