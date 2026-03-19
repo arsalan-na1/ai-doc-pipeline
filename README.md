@@ -2,7 +2,7 @@
 
 Upload a resume PDF, get structured data back. Runs on AWS Free Tier. The only cost is OpenAI, which works out to about two cents a month at a hundred resumes.
 
-You upload a PDF through a web dashboard, the system pulls out the text, sends it to GPT-4o-mini, and shows you the parsed results. Everything is serverless.
+You upload a PDF through a web dashboard, the system pulls out the text, sends it to GPT-4o-mini, and shows you the parsed results. Everything is serverless. Each browser session gets its own document history so users only see their own uploads.
 
 ## How it works
 
