@@ -158,7 +158,7 @@
       background: linear-gradient(140deg, #fff 0%, rgba(255,255,255,.75) 50%, var(--violet) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
-      opacity: 0; transform: translateY(56px);
+      /* opacity/transform set by JS so chars are visible if scripts fail */
     }
     .hero-sub {
       font-size: clamp(16px,2vw,19px); color: var(--text-muted);
@@ -427,9 +427,9 @@
     <a class="nav-link" href="#pipeline">Pipeline</a>
     <a class="nav-link" href="#upload">Upload</a>
     <a class="nav-link" href="#documents">Results</a>
-    <a class="nav-link" href="https://github.com/anthonymortimer/ai-document-pipeline" target="_blank" rel="noopener">GitHub</a>
+    <a class="nav-link" href="https://github.com/arsalan-na1/ai-doc-pipeline" target="_blank" rel="noopener">GitHub</a>
   </div>
-  <button class="nav-cta" onclick="scrollTo('upload')">Upload Resume</button>
+  <button class="nav-cta" onclick="openFilePicker()">Upload Resume</button>
 </nav>
 
 <!-- ── Hero ── -->
@@ -449,14 +449,14 @@
     Upload a resume PDF and receive structured insights in seconds — powered by a serverless AWS pipeline with GPT-4o-mini analysis.
   </p>
   <div class="hero-ctas">
-    <button class="btn-primary" onclick="scrollTo('upload')">
+    <button class="btn-primary" onclick="openFilePicker()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
       Upload Resume
     </button>
-    <button class="btn-secondary" onclick="scrollTo('pipeline')">
+    <button class="btn-secondary" onclick="openHowItWorksModal()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"/>
         <line x1="12" y1="8" x2="12" y2="12"/>
@@ -597,7 +597,7 @@
         AI Document Intelligence Pipeline
       </div>
       <div class="ft-links">
-        <a class="ft-link" href="https://github.com/anthonymortimer/ai-document-pipeline" target="_blank" rel="noopener">GitHub</a>
+        <a class="ft-link" href="https://github.com/arsalan-na1/ai-doc-pipeline" target="_blank" rel="noopener">GitHub</a>
         <a class="ft-link" href="#pipeline">Architecture</a>
         <a class="ft-link" href="#upload">Try It</a>
       </div>
@@ -605,6 +605,42 @@
     <div class="ft-copy">Built on AWS Free Tier &middot; Powered by GPT-4o-mini &middot; &copy; 2025</div>
   </div>
 </footer>
+
+<!-- ── How It Works Modal ── -->
+<div class="modal-ov" id="hiw-modal" onclick="if(event.target===this)closeHowItWorksModal()">
+  <div class="modal-panel">
+    <button class="modal-x" onclick="closeHowItWorksModal()" aria-label="Close">&#x2715;</button>
+    <div style="margin-bottom:24px">
+      <div class="sec-label" style="margin-bottom:8px">Architecture</div>
+      <div class="m-name">How It Works</div>
+      <p style="font-size:14px;color:var(--text-muted);margin-top:8px">A four-stage serverless pipeline on AWS Free Tier — from PDF upload to structured resume data in under 30 seconds.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--fh);font-size:12px;font-weight:800;color:var(--indigo)">01</div>
+        <div><div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Extract Text</div><div style="font-size:13px;color:var(--text-muted)">PyMuPDF extracts raw text from the uploaded PDF. pdfplumber is used as a fallback for complex document layouts.</div></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--fh);font-size:12px;font-weight:800;color:var(--cyan)">02</div>
+        <div><div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Analyze with AI</div><div style="font-size:13px;color:var(--text-muted)">Extracted text is sent to GPT-4o-mini via the OpenAI API with a strict JSON schema prompt for structured extraction.</div></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--fh);font-size:12px;font-weight:800;color:var(--violet)">03</div>
+        <div><div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Parse &amp; Structure</div><div style="font-size:13px;color:var(--text-muted)">The model returns validated JSON: name, email, phone, skills, work history, education, and a recruiter summary.</div></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--fh);font-size:12px;font-weight:800;color:var(--green)">04</div>
+        <div><div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Store &amp; Retrieve</div><div style="font-size:13px;color:var(--text-muted)">Results persist in DynamoDB, served via API Gateway with session isolation — each user sees only their own uploads.</div></div>
+      </div>
+    </div>
+    <div style="margin-top:24px;text-align:center">
+      <button class="btn-primary" onclick="closeHowItWorksModal();openFilePicker()" style="font-size:14px;padding:12px 24px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Try It Now
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Detail Modal ── -->
 <div class="modal-ov" id="modal" onclick="if(event.target===this)closeModal()">
@@ -618,8 +654,8 @@
 
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script>
 // ── Config ──────────────────────────────────────────────────────
 const API_BASE_URL = '__API_BASE_URL__';
@@ -641,7 +677,20 @@ function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function scrollTo(id) { document.getElementById(id).scrollIntoView({behavior:'smooth'}); }
+// navTo: named to avoid shadowing window.scrollTo (which GSAP uses internally)
+function navTo(id) { document.getElementById(id).scrollIntoView({behavior:'smooth'}); }
+function openFilePicker() {
+  navTo('upload');
+  setTimeout(() => document.getElementById('file-input').click(), 500);
+}
+function openHowItWorksModal() {
+  document.getElementById('hiw-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeHowItWorksModal() {
+  document.getElementById('hiw-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
 function toast(msg, type='') {
   const c = document.getElementById('toasts');
   const t = document.createElement('div');
@@ -685,9 +734,14 @@ words.forEach((w, wi) => {
 
 // ── GSAP ─────────────────────────────────────────────────────────
 if (typeof gsap !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger);
+  // Guard registerPlugin — ScrollTrigger CDN may fail independently
+  if (typeof ScrollTrigger !== 'undefined') {
+    gsap.registerPlugin(ScrollTrigger);
+  }
 
-  // Hero chars in
+  // Set hero chars to initial hidden state THEN animate in
+  // (keeping opacity out of CSS so chars are always visible if GSAP fails)
+  gsap.set('.hc', { opacity: 0, y: 56 });
   gsap.to('.hc', {
     opacity: 1, y: 0, duration: .8, ease: 'power3.out',
     stagger: { each: .03, from: 'start' }, delay: .3
@@ -696,19 +750,18 @@ if (typeof gsap !== 'undefined') {
   gsap.from('.hero-ctas',  { opacity:0, y:20, duration:.7, delay:1.6, ease:'power2.out' });
   gsap.from('.scroll-hint',{ opacity:0,       duration:.7, delay:2.0, ease:'power2.out' });
 
-  // Pipeline cards
-  gsap.utils.toArray('.p-card').forEach((c,i) => {
-    gsap.from(c, { scrollTrigger:{trigger:c,start:'top 87%'}, opacity:0, y:50, duration:.7, delay:i*.1, ease:'power2.out' });
-  });
-
-  // Upload + docs sections
-  ['.dz-wrap','.upload-panel > div:first-child','.docs-hdr'].forEach(sel => {
-    const el = document.querySelector(sel);
-    if (el) gsap.from(el, { scrollTrigger:{trigger:el,start:'top 88%'}, opacity:0, y:35, duration:.7, ease:'power2.out' });
-  });
-} else {
-  document.querySelectorAll('.hc').forEach(c => { c.style.opacity=1; c.style.transform='none'; });
+  // Pipeline cards (only if ScrollTrigger loaded)
+  if (typeof ScrollTrigger !== 'undefined') {
+    gsap.utils.toArray('.p-card').forEach((c,i) => {
+      gsap.from(c, { scrollTrigger:{trigger:c,start:'top 87%'}, opacity:0, y:50, duration:.7, delay:i*.1, ease:'power2.out' });
+    });
+    ['.dz-wrap','.upload-panel > div:first-child','.docs-hdr'].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) gsap.from(el, { scrollTrigger:{trigger:el,start:'top 88%'}, opacity:0, y:35, duration:.7, ease:'power2.out' });
+    });
+  }
 }
+// No else needed — chars are visible by default (no CSS opacity:0)
 
 // ── 3D Card Tilt ─────────────────────────────────────────────────
 document.querySelectorAll('.p-card').forEach(card => {
@@ -876,7 +929,7 @@ async function openModal(id) {
   }
 }
 function closeModal() { document.getElementById('modal').classList.remove('open'); document.body.style.overflow=''; }
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeHowItWorksModal(); } });
 
 function renderModal(doc) {
   const p=doc.parsed_data||{};
