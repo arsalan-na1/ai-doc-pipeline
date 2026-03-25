@@ -14,7 +14,7 @@ Add six resume intelligence features to the AI Document Intelligence Pipeline: R
 - GPT call #2 (new): analyze resume → `analysis`
 - New endpoint: `POST /documents/{id}/job-match` → on-demand match against a user-supplied job description
 
-No new AWS resources. No new Lambdas. No new DynamoDB tables.
+No new Lambdas. No new DynamoDB tables. One new API Gateway method on an existing resource.
 
 ## Data Model
 
@@ -64,7 +64,7 @@ No new AWS resources. No new Lambdas. No new DynamoDB tables.
 }
 ```
 
-**Score constraint:** The five category maxes are fixed at 20/25/30/15/10 (sum = 100). The `ANALYSIS_SYSTEM_PROMPT` explicitly states these as hard limits GPT must not exceed. `total` is computed server-side by summing the five `score` values — GPT never sets `total` directly.
+**Score constraint:** The five category maxes are fixed at 20/25/30/15/10 (sum = 100). The `ANALYSIS_SYSTEM_PROMPT` must state these verbatim as hard limits: *"contact_info MAX is 20, skills MAX is 25, experience MAX is 30, education MAX is 15, formatting MAX is 10. These are hard limits — never return a score value above its category max."* GPT never sets `total` directly — it is computed server-side as `int(sum(v["score"] for v in breakdown.values()))`, which also eliminates float drift.
 
 **`improvements`** is ordered high → medium → low priority. 5–8 items.
 
@@ -78,6 +78,8 @@ Request body:
 ```json
 { "job_description": "We're looking for a Senior Engineer with 5+ years..." }
 ```
+
+`job_description` must be non-empty and must not exceed 5,000 characters. The API returns 400 if either condition is violated.
 
 Response:
 ```json
@@ -93,7 +95,25 @@ Response:
 }
 ```
 
-The job-match prompt uses `parsed_data` (structured skills, experience, education JSON already on the DynamoDB item) as the resume context — not raw text. This gives better signal quality at any length and requires no additional storage.
+The job-match prompt uses `parsed_data` (structured skills, experience, education JSON already on the DynamoDB item) as the resume context — not raw text. Because `parsed_data` is fetched from DynamoDB it will contain `Decimal` values; serialize it using `json.dumps(parsed_data, cls=DecimalEncoder)` before injecting into the prompt.
+
+### `JOB_MATCH_SYSTEM_PROMPT` requirements
+
+The prompt must instruct GPT to return a JSON object with exactly these fields: `match_score` (integer 0–100), `strong_matches` (array of strings), `missing_keywords` (array of strings), `tailoring_tips` (array of 2–4 actionable strings). State the field names and types as hard requirements — GPT must not rename or add fields.
+
+## Infrastructure Changes
+
+### API Gateway
+
+Create a new child resource `/documents/{id}/job-match` under the existing `/documents/{id}` resource. Add a `POST` method on this new resource with Lambda proxy integration pointing to `results_api`. Also add an `OPTIONS` method on `/documents/{id}/job-match` — the Lambda's existing `OPTIONS` handler will return the updated `CORS_HEADERS` including `POST`.
+
+**Note on OPTIONS handling:** The existing setup passes OPTIONS requests through to the Lambda (which handles them in the `if http_method == "OPTIONS"` branch). Updating `CORS_HEADERS` in the Lambda is sufficient — no mock integration change needed.
+
+**Note on routing:** Because a child resource is used, `event["path"]` in the Lambda will be `/documents/abc123/job-match`. The routing condition `path.endswith("/job-match")` is therefore correct and unambiguous.
+
+### IAM
+
+Grant the `results_api` Lambda execution role `ssm:GetParameter` permission on the OpenAI API key parameter ARN. The `document_processor` role already has this — `results_api` currently does not.
 
 ## Backend Changes
 
@@ -101,53 +121,68 @@ The job-match prompt uses `parsed_data` (structured skills, experience, educatio
 
 **Add `ANALYSIS_SYSTEM_PROMPT`**
 
-A focused prompt that receives the `parsed_data` JSON and raw resume text. Key constraint language (verbatim in prompt):
-> "contact_info MAX is 20, skills MAX is 25, experience MAX is 30, education MAX is 15, formatting MAX is 10. These are hard limits — never return a score value above its category max."
-
-Returns the `analysis` JSON object exactly as specified in the data model above.
+A focused prompt that receives `parsed_data` JSON and raw resume text (truncated to 6,000 chars to stay comfortably within gpt-4o-mini's context window alongside the output budget). The prompt must include the hard score-max language verbatim (see Data Model above). Returns the `analysis` JSON object as specified.
 
 **Add `analyze_resume_deep(parsed_data, raw_text, api_key)`**
 
 Same pattern as `analyze_resume_with_llm`:
 - Creates `OpenAI(api_key=api_key)` client
+- Passes `parsed_data` as JSON using plain `json.dumps(parsed_data)` (no `DecimalEncoder` needed — at this point `parsed_data` is still a raw Python dict from GPT, not yet stored in DynamoDB, so no Decimals are present) and `raw_text[:6000]` in the user message
 - Calls `gpt-4o-mini` with `response_format={"type": "json_object"}`
-- Temperature `0.2` (slightly higher than parse to allow expressive improvement text)
-- `max_tokens=2500`
-- Returns parsed JSON dict
-
-After receiving the response, compute `total` server-side:
-```python
-breakdown = result["score"]["breakdown"]
-result["score"]["total"] = sum(v["score"] for v in breakdown.values())
-```
+- Temperature `0.2`, `max_tokens=2500`
+- After parsing response, computes total server-side: `result["score"]["total"] = int(sum(v["score"] for v in result["score"]["breakdown"].values()))`
+- Returns the dict
 
 **Update `lambda_handler`**
 
-After `parsed_data = analyze_resume_with_llm(...)` succeeds, call `analyze_resume_deep()` in a `try/except`. On success, pass `analysis=analysis_data` to `store_results`. On failure, log the error and proceed — the document stores as COMPLETED with `parsed_data` intact, analysis panel simply absent in the UI.
+After `parsed_data = analyze_resume_with_llm(...)` succeeds, call `analyze_resume_deep()` in a `try/except`. The existing `store_results` call (line 201–202) gains one additional keyword argument — `analysis=analysis_data` — while all other arguments (`session_id`, `parsed_data`, `extracted_text`) are retained unchanged. On analysis failure, log and call `store_results` without the `analysis` argument — document stores as COMPLETED with `parsed_data` intact.
 
 **Update `store_results`**
 
-Add optional `analysis` parameter. If provided, store as `item["analysis"]` with the same `Decimal` conversion as `parsed_data`.
+Add optional `analysis` parameter. If provided, store as `item["analysis"]` using the same `json.loads(json.dumps(...), parse_float=Decimal)` conversion as `parsed_data`.
 
 ### `lambda/results_api/lambda_function.py`
 
+**New import:** Add `from openai import OpenAI` at the top of the file (alongside the existing `boto3` import). The `openai` package is already a dependency of the Lambda layer used by `document_processor`; confirm it is available in `results_api`'s layer or add it.
+
 **New env var:** `SSM_PARAMETER_NAME` — same SSM parameter as document_processor.
 
-**Add `get_openai_api_key()`** — identical SSM caching pattern as document_processor.
+**Add `get_openai_api_key()`** — identical SSM caching pattern (module-level `_openai_api_key = None`).
 
 **Update `CORS_HEADERS`** — add `POST` to `Access-Control-Allow-Methods`.
 
-**Add `job_match(document_id, job_description)`**
-1. Fetch item from DynamoDB by `document_id`
-2. Return 404 if not found; 400 if `parsed_data` absent (document not yet processed)
-3. Serialize `parsed_data` to JSON string as resume context
-4. Call `gpt-4o-mini` with job-match prompt (temperature 0.3, max_tokens 1000, json_object response format)
-5. Return `response(200, result)`
+**Restructure `lambda_handler` method routing**
 
-**Update `lambda_handler`**
-- Add `POST` branch: `POST /documents/{id}/job-match` → `job_match(path_params["id"], body["job_description"])`
-- Parse body: `body = json.loads(event.get("body") or "{}")`
-- Validate `job_description` present and non-empty; return 400 if missing
+Replace the current flat `if GET ... else: 405` with explicit branches:
+```python
+if http_method == "OPTIONS":
+    return response(200, {})
+elif http_method == "GET":
+    # existing GET routing unchanged
+elif http_method == "POST":
+    body = json.loads(event.get("body") or "{}")
+    if path.startswith("/documents/") and path_params.get("id") and path.endswith("/job-match"):
+        jd = body.get("job_description", "").strip()
+        if not jd:
+            return response(400, {"error": "job_description is required"})
+        if len(jd) > 5000:
+            return response(400, {"error": "job_description exceeds 5000 character limit"})
+        return job_match(path_params["id"], jd)
+    return response(404, {"error": "Not found"})
+else:
+    return response(405, {"error": "Method not allowed"})
+```
+
+**Add `job_match(document_id, job_description)`**
+1. Fetch item from DynamoDB by `document_id`; return 404 if not found
+2. Return 400 `"Document not yet processed"` if `parsed_data` absent
+3. Serialize: `resume_context = json.dumps(item["parsed_data"], cls=DecimalEncoder)`
+4. Call `gpt-4o-mini` with `JOB_MATCH_SYSTEM_PROMPT`, temperature 0.3, max_tokens 1000, `response_format={"type": "json_object"}`
+5. Return `response(200, json.loads(result_content))`
+
+**Update `list_documents`**
+
+Explicitly exclude `analysis` from the per-document summary dict (same as `parsed_data` is currently excluded). This prevents the large analysis blob from inflating list response payloads.
 
 ## Frontend Changes (`frontend/index.html`)
 
@@ -158,16 +193,16 @@ function renderPage() {
   const hash = location.hash;
   if (hash.startsWith('#doc/')) {
     const id = hash.slice(5);
-    showAnalysisPage(id);   // immediately fetches GET /documents/{id}
+    showAnalysisPage(id);   // fetches GET /documents/{id} immediately
   } else {
     showHomePage();
   }
 }
 window.addEventListener('hashchange', renderPage);
-renderPage(); // fires on load — direct-link to #doc/abc123 works immediately
+renderPage(); // fires on load — direct-link to #doc/abc123 populates fully without interaction
 ```
 
-`showAnalysisPage(id)` fetches `GET /documents/{id}` immediately (no interaction required), shows a loading state while in-flight, then calls `renderAnalysisPage(doc)` on success.
+`showAnalysisPage(id)` fetches `GET /documents/{id}` immediately on call (no interaction required), shows a loading state while in-flight, then calls `renderAnalysisPage(doc)` on success.
 
 `showHomePage()` / `showAnalysisPage()` toggle visibility of `#main-content` and `#doc-page` divs. The `#doc-page` div is a full-viewport overlay (`position: fixed; inset: 0; z-index: 50; overflow-y: auto`).
 
@@ -196,13 +231,14 @@ If `doc.analysis` is absent (old document or analysis call failed), the score/AT
 
 - Checkbox on left, priority badge (`HIGH` / `MED` / `LOW`) on right
 - Checking strikes through text and dims the card
-- State stored in a JS `Set` of checked IDs — ephemeral, resets on page load
+- State stored in a JS `Set` of checked IDs (`checkedIds`)
+- **`checkedIds` is re-initialized to `new Set()` inside `showAnalysisPage()` on every call** — not just on page load — so hash navigation between documents never carries stale checkmarks
 
 ### Rewrite suggestion cards
 
 - Collapsed by default showing section name + expand chevron
 - Expanded: original text (dim, faint strikethrough style) above suggested rewrite (bright)
-- "Copy" button copies suggested text to clipboard via `navigator.clipboard.writeText()`
+- "Copy" button uses `navigator.clipboard.writeText()` — requires HTTPS (works on CloudFront; test locally with `python -m http.server`, not by opening the file directly from disk)
 
 ### Job Match drawer
 
@@ -221,8 +257,14 @@ If `doc.analysis` is absent (old document or analysis call failed), the score/AT
 | Analysis GPT call fails at upload | Document stores as COMPLETED with `parsed_data` only; analysis panel hidden in UI |
 | Job-match call fails | Error message shown inline in drawer; drawer stays open |
 | `GET /documents/{id}` returns 404 on direct-link | Analysis page shows "Document not found" with a back link |
-| `job_description` missing from POST body | API returns 400 with clear error message |
+| `job_description` missing or empty | API returns 400 with clear error message |
+| `job_description` exceeds 5,000 chars | API returns 400 with clear error message |
 | `parsed_data` absent (doc still PROCESSING) | Job-match returns 400: "Document not yet processed" |
+| results_api SSM call fails (IAM misconfigured) | Job-match returns 500; document processor is unaffected |
+
+## Security Notes
+
+Document IDs are 16-char hex tokens (SHA-256 truncated). `GET /documents/{id}` does not validate `session_id` — direct-link access is intentionally unauthenticated. This is an existing tradeoff, not new behaviour introduced by this feature. Implementers must not add session_id validation to `get_document`.
 
 ## Out of Scope
 
