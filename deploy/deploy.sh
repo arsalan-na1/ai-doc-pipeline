@@ -346,7 +346,8 @@ else
         --zip-file "fileb://$API_ZIP_WIN" \
         --timeout 10 \
         --memory-size 128 \
-        --environment "Variables={DYNAMODB_TABLE=$DYNAMODB_TABLE_NAME,S3_BUCKET=$S3_BUCKET_NAME}" \
+        --layers "$LAYER_VERSION_ARN" \
+        --environment "Variables={DYNAMODB_TABLE=$DYNAMODB_TABLE_NAME,S3_BUCKET=$S3_BUCKET_NAME,SSM_PARAMETER_NAME=$SSM_PARAMETER_NAME}" \
         --region "$AWS_REGION" > /dev/null
     echo "  Created function: $API_FUNCTION"
 fi
@@ -466,7 +467,7 @@ setup_cors() {
         --resource-id "$RESOURCE_ID" \
         --http-method OPTIONS \
         --status-code 200 \
-        --response-parameters '{"method.response.header.Access-Control-Allow-Headers":"'"'"'Content-Type'"'"'","method.response.header.Access-Control-Allow-Methods":"'"'"'GET,OPTIONS'"'"'","method.response.header.Access-Control-Allow-Origin":"'"'"'*'"'"'"}' \
+        --response-parameters '{"method.response.header.Access-Control-Allow-Headers":"'"'"'Content-Type'"'"'","method.response.header.Access-Control-Allow-Methods":"'"'"'GET,POST,OPTIONS'"'"'","method.response.header.Access-Control-Allow-Origin":"'"'"'*'"'"'"}' \
         --region "$AWS_REGION" > /dev/null 2>&1 || true
 }
 

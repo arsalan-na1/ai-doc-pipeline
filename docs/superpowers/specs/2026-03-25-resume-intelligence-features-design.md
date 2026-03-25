@@ -107,7 +107,7 @@ The prompt must instruct GPT to return a JSON object with exactly these fields: 
 
 Create a new child resource `/documents/{id}/job-match` under the existing `/documents/{id}` resource. Add a `POST` method on this new resource with Lambda proxy integration pointing to `results_api`. Also add an `OPTIONS` method on `/documents/{id}/job-match` — the Lambda's existing `OPTIONS` handler will return the updated `CORS_HEADERS` including `POST`.
 
-**Note on OPTIONS handling:** The existing setup passes OPTIONS requests through to the Lambda (which handles them in the `if http_method == "OPTIONS"` branch). Updating `CORS_HEADERS` in the Lambda is sufficient — no mock integration change needed.
+**Note on OPTIONS handling:** The existing `setup_cors()` function in `deploy.sh` uses an API Gateway **mock integration** for OPTIONS (not Lambda proxy), with the allowed methods hardcoded in the integration response parameters. The Lambda's `CORS_HEADERS` do not affect this path. The `deploy.sh` `setup_cors()` function has already been updated to include `POST` in `Access-Control-Allow-Methods` (`GET,POST,OPTIONS`), so any new resource created with `setup_cors()` — including `/documents/{id}/job-match` — will have correct CORS headers without extra work.
 
 **Note on routing:** Because a child resource is used, `event["path"]` in the Lambda will be `/documents/abc123/job-match`. The routing condition `path.endswith("/job-match")` is therefore correct and unambiguous.
 
