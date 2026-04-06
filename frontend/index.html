@@ -1110,7 +1110,7 @@ async function runJobMatch() {
   resEl.innerHTML = '';
 
   try {
-    var r = await fetch(API_BASE_URL+'/documents/'+encodeURIComponent(currentDocId)+'/match', {
+    var r = await fetch(API_BASE_URL+'/documents/'+encodeURIComponent(currentDocId)+'/job-match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ job_description: jd })
