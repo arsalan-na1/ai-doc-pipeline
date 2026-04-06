@@ -150,8 +150,8 @@ For "rewrites": return 2–3 rewrite suggestions targeting the weakest sections.
 Return ONLY valid JSON. No additional commentary or explanation."""
 
 
-def _call_llm_json(client, model, messages, temperature, max_tokens, max_retries=2):
-    """Call LLM and parse JSON response, retrying on malformed JSON."""
+def _call_llm_json(client, model, messages, temperature, max_tokens, max_retries=3):
+    """Call LLM and parse JSON response, retrying on malformed JSON or empty responses."""
     last_error = None
     for attempt in range(1, max_retries + 1):
         response = client.chat.completions.create(
@@ -161,6 +161,10 @@ def _call_llm_json(client, model, messages, temperature, max_tokens, max_retries
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        if not response.choices or not response.choices[0].message.content:
+            last_error = ValueError("LLM returned empty response")
+            logger.warning("Empty LLM response (attempt %d/%d)", attempt, max_retries)
+            continue
         content = response.choices[0].message.content
         try:
             return json.loads(content)
@@ -185,7 +189,7 @@ def analyze_resume_with_llm(text, api_key):
             {"role": "user", "content": f"Parse the following resume text:\n\n{text}"},
         ],
         temperature=0.1,
-        max_tokens=2000,
+        max_tokens=4000,
     )
     logger.info("LLM analysis completed successfully")
     return result
@@ -211,7 +215,7 @@ def analyze_resume_deep(parsed_data, raw_text, api_key):
             {"role": "user", "content": user_message},
         ],
         temperature=0.2,
-        max_tokens=2500,
+        max_tokens=4000,
     )
 
     # Compute total server-side — never trust the LLM to sum correctly
