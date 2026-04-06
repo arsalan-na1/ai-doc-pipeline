@@ -1,7 +1,7 @@
 """
 Document Processor Lambda
 Triggered by S3 PUT events when a PDF is uploaded.
-Extracts text using PyMuPDF, analyzes with OpenAI gpt-4o-mini, stores results in DynamoDB.
+Extracts text using PyMuPDF, analyzes with Qwen3 Coder via OpenRouter, stores results in DynamoDB.
 """
 
 import json
@@ -151,11 +151,14 @@ Return ONLY valid JSON. No additional commentary or explanation."""
 
 
 def analyze_resume_with_llm(text, api_key):
-    """Send extracted text to OpenAI gpt-4o-mini for structured resume analysis."""
-    client = OpenAI(api_key=api_key)
+    """Send extracted text to Qwen3 Coder via OpenRouter for structured resume analysis."""
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="qwen/qwen3-coder-480b-a35b:free",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Parse the following resume text:\n\n{text}"},
@@ -171,8 +174,11 @@ def analyze_resume_with_llm(text, api_key):
 
 
 def analyze_resume_deep(parsed_data, raw_text, api_key):
-    """Send parsed resume data and raw text to OpenAI gpt-4o-mini for deep quality analysis."""
-    client = OpenAI(api_key=api_key)
+    """Send parsed resume data and raw text to Qwen3 Coder via OpenRouter for deep quality analysis."""
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
     user_message = (
         f"Parsed resume data:\n{json.dumps(parsed_data)}\n\n"
@@ -180,7 +186,7 @@ def analyze_resume_deep(parsed_data, raw_text, api_key):
     )
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="qwen/qwen3-coder-480b-a35b:free",
         messages=[
             {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},

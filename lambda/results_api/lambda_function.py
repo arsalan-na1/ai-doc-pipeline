@@ -165,7 +165,10 @@ def job_match(document_id, job_description):
     parsed_data_str = json.dumps(parsed_data, cls=DecimalEncoder)
 
     api_key = get_openai_api_key()
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
     user_message = (
         f"Resume data:\n{parsed_data_str}\n\n"
@@ -173,7 +176,7 @@ def job_match(document_id, job_description):
     )
 
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="qwen/qwen3-coder-480b-a35b:free",
         messages=[
             {"role": "system", "content": JOB_MATCH_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
