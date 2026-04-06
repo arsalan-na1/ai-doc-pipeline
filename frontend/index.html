@@ -210,8 +210,90 @@
     .edu-deg { font-family: var(--fh); font-size: 14px; font-weight: 600; color: var(--txt); }
     .edu-inst { font-size: 13px; color: var(--txt-m); }
 
+    /* Doc Page Overlay */
+    #doc-page { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; }
+    .dp-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 14px 24px; background: rgba(5,5,8,.82); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-bottom: 1px solid var(--bdr); }
+    .dp-back { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--bdr); background: rgba(255,255,255,.04); color: var(--txt-m); font-size: 18px; transition: background .18s, color .18s; flex-shrink: 0; }
+    .dp-back:hover { background: rgba(255,255,255,.1); color: var(--txt); }
+    .dp-title { flex: 1; min-width: 0; font-family: var(--fh); font-size: 16px; font-weight: 700; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dp-match-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 100px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: #fff; font-family: var(--fb); font-size: 13px; font-weight: 600; border: none; box-shadow: 0 0 20px rgba(99,102,241,.3); transition: opacity .18s, transform .18s; flex-shrink: 0; }
+    .dp-match-btn:hover { opacity: .88; transform: scale(.97); }
+    .dp-content { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; }
+    .dp-score-hero { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; padding: 28px; background: rgba(255,255,255,.03); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--bdr); border-radius: var(--r-lg); margin-bottom: 32px; }
+    .dp-score-ring { position: relative; flex-shrink: 0; }
+    .dp-score-svg { display: block; }
+    #dp-ring { transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+    .dp-score-val { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--fh); font-size: 32px; font-weight: 800; color: var(--txt); }
+    .dp-score-val span { line-height: 1; }
+    .dp-meta { flex: 1; min-width: 200px; }
+    .dp-meta-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+    .dp-meta-stat { font-family: var(--fh); font-size: 14px; font-weight: 700; color: var(--txt); }
+    .dp-meta-lbl { font-size: 11px; color: var(--txt-d); margin-top: 2px; }
+    .dp-career-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 100px; background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.25); font-size: 12px; font-weight: 600; color: var(--violet); }
+    .dp-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .dp-bar-row { display: flex; align-items: center; gap: 10px; }
+    .dp-bar-label { font-size: 12px; color: var(--txt-m); width: 110px; flex-shrink: 0; }
+    .dp-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 100px; overflow: hidden; }
+    .dp-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--indigo), var(--cyan)); width: 0%; transition: width .8s cubic-bezier(.4,0,.2,1); }
+    .dp-bar-pct { font-size: 11px; color: var(--txt-d); width: 32px; text-align: right; }
+    .dp-advice { margin-top: 16px; font-size: 14px; color: var(--txt-m); line-height: 1.7; padding: 14px 16px; background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.15); border-radius: var(--r-sm); }
+    .dp-section { margin-bottom: 28px; }
+    .dp-sec-h { font-family: var(--fh); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--indigo); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .dp-issues-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .dp-issues-list li { position: relative; padding: 10px 14px 10px 32px; background: rgba(255,255,255,.02); border: 1px solid var(--bdr); border-radius: var(--r-sm); font-size: 13px; color: var(--txt-m); line-height: 1.6; }
+    .dp-issues-list li::before { content: '\26A0'; position: absolute; left: 10px; top: 10px; font-size: 14px; }
+    .imp-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,.02); border: 1px solid var(--bdr); border-radius: var(--r-sm); margin-bottom: 8px; transition: background .18s, border-color .18s; cursor: pointer; }
+    .imp-card:hover { background: rgba(255,255,255,.04); }
+    .imp-card.checked { background: rgba(74,222,128,.04); border-color: rgba(74,222,128,.2); }
+    .imp-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--bdr); background: rgba(255,255,255,.03); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .18s, border-color .18s; font-size: 12px; color: transparent; }
+    .imp-card.checked .imp-check { background: rgba(74,222,128,.15); border-color: var(--green); color: var(--green); }
+    .imp-text { flex: 1; font-size: 13px; color: var(--txt-m); line-height: 1.6; }
+    .imp-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-left: 8px; flex-shrink: 0; }
+    .imp-badge.high { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.25); }
+    .imp-badge.medium { background: rgba(251,191,36,.1); color: var(--yellow); border: 1px solid rgba(251,191,36,.25); }
+    .imp-badge.low { background: rgba(74,222,128,.1); color: var(--green); border: 1px solid rgba(74,222,128,.25); }
+    .rw-card { border: 1px solid var(--bdr); border-radius: var(--r-sm); margin-bottom: 8px; overflow: hidden; }
+    .rw-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,.02); cursor: pointer; transition: background .18s; }
+    .rw-header:hover { background: rgba(255,255,255,.04); }
+    .rw-header-title { font-family: var(--fh); font-size: 13px; font-weight: 600; color: var(--txt); }
+    .rw-chevron { font-size: 14px; color: var(--txt-d); transition: transform .25s; }
+    .rw-card.open .rw-chevron { transform: rotate(180deg); }
+    .rw-body { display: none; padding: 14px 16px; border-top: 1px solid var(--bdr); }
+    .rw-card.open .rw-body { display: block; }
+    .rw-original { font-size: 13px; color: var(--txt-d); line-height: 1.6; text-decoration: line-through; margin-bottom: 10px; padding: 10px 12px; background: rgba(248,113,113,.04); border-radius: 6px; }
+    .rw-suggested { font-size: 13px; color: var(--txt); line-height: 1.6; padding: 10px 12px; background: rgba(74,222,128,.04); border: 1px solid rgba(74,222,128,.12); border-radius: 6px; margin-bottom: 10px; }
+    .rw-copy-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 100px; background: rgba(255,255,255,.04); border: 1px solid var(--bdr); font-size: 11px; font-weight: 600; color: var(--txt-m); transition: background .18s, color .18s; }
+    .rw-copy-btn:hover { background: rgba(255,255,255,.08); color: var(--txt); }
+
+    /* Job Match Drawer */
+    #jm-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); display: none; }
+    #jm-backdrop.open { display: block; }
+    #jm-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 100%; z-index: 61; background: rgba(9,9,15,.96); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-left: 1px solid var(--bdr); transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; }
+    #jm-drawer.open { transform: translateX(0); }
+    .jm-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--bdr); }
+    .jm-title { font-family: var(--fh); font-size: 16px; font-weight: 700; color: var(--txt); }
+    .jm-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--bdr); background: rgba(255,255,255,.04); color: var(--txt-m); font-size: 14px; display: flex; align-items: center; justify-content: center; transition: background .18s, color .18s; }
+    .jm-close:hover { background: rgba(255,255,255,.1); color: var(--txt); }
+    .jm-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .jm-jd { width: 100%; min-height: 160px; resize: vertical; padding: 14px 16px; border-radius: var(--r-sm); border: 1px solid var(--bdr); background: rgba(255,255,255,.03); color: var(--txt); font-family: var(--fb); font-size: 14px; line-height: 1.6; transition: border-color .18s; }
+    .jm-jd:focus { outline: none; border-color: var(--indigo); }
+    .jm-analyze-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: 100px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: #fff; font-family: var(--fb); font-size: 14px; font-weight: 600; border: none; box-shadow: 0 0 20px rgba(99,102,241,.3); transition: opacity .18s; align-self: flex-start; }
+    .jm-analyze-btn:hover { opacity: .88; }
+    .jm-analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .jm-results { display: flex; flex-direction: column; gap: 14px; }
+    .jm-score-row { display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(255,255,255,.03); border: 1px solid var(--bdr); border-radius: var(--r-sm); }
+    .jm-score-num { font-family: var(--fh); font-size: 28px; font-weight: 800; color: var(--txt); }
+    .jm-score-lbl { font-size: 12px; color: var(--txt-m); }
+    .jm-chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+    .jm-chip { padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+    .jm-chip.match { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.25); color: var(--green); }
+    .jm-chip.miss { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2); color: var(--red); }
+    .jm-rec { font-size: 13px; color: var(--txt-m); line-height: 1.7; padding: 14px 16px; background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.15); border-radius: var(--r-sm); }
+    .jm-sub-h { font-family: var(--fh); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--indigo); margin-bottom: 8px; }
+    .jm-error { padding: 14px 16px; background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.2); border-radius: var(--r-sm); color: var(--red); font-size: 13px; display: none; }
+
     /* Responsive */
-    @media (max-width: 768px) { .pipeline-grid::before { display: none; } .nav-links { display: none; } .ft-inner { flex-direction: column; align-items: flex-start; } .modal-panel { padding: 24px 20px; } }
+    @media (max-width: 768px) { .pipeline-grid::before { display: none; } .nav-links { display: none; } .ft-inner { flex-direction: column; align-items: flex-start; } .modal-panel { padding: 24px 20px; } #jm-drawer { width: 100%; } .dp-score-hero { gap: 20px; } .dp-bar-label { width: 80px; } }
     @media (max-width: 480px) { .wrap { padding: 0 20px; } .hero-specs { flex-direction: column; border-radius: var(--r); } .spec-item { border-right: none; border-bottom: 1px solid var(--bdr); width: 100%; justify-content: center; } .spec-item:last-child { border-bottom: none; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   </style>
@@ -223,6 +305,7 @@
 <canvas id="bg-canvas"></canvas>
 <div id="toasts"></div>
 
+<div id="main-content">
 <!-- Nav -->
 <nav class="nav">
   <a class="nav-brand" href="#">
@@ -380,6 +463,7 @@
     <div class="ft-copy">Built by <a href="https://github.com/arsalan-na1" target="_blank" rel="noopener">Arsalan Nawabi</a> &nbsp;&middot;&nbsp; AWS Free Tier &nbsp;&middot;&nbsp; GPT-4o-mini &nbsp;&middot;&nbsp; &copy; 2025</div>
   </div>
 </footer>
+</div><!-- /main-content -->
 
 <!-- How It Works Modal -->
 <div class="modal-ov" id="hiw-modal" onclick="if(event.target===this)closeHowItWorksModal()">
@@ -403,6 +487,107 @@
   <div class="modal-panel">
     <button class="modal-x" onclick="closeModal()" aria-label="Close">&#x2715;</button>
     <div id="modal-body"><div class="m-loading"><div class="spin"></div><span>Loading…</span></div></div>
+  </div>
+</div>
+
+<!-- Doc Analysis Page -->
+<div id="doc-page" style="display:none">
+  <div class="dp-header">
+    <button class="dp-back" onclick="location.hash=''" aria-label="Back">&#x2190;</button>
+    <div class="dp-title" id="dp-name">Document</div>
+    <button class="dp-match-btn" id="jm-open-btn" onclick="openJobMatchDrawer()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+      Match to Job
+    </button>
+  </div>
+  <div class="dp-content">
+    <!-- Loading -->
+    <div id="dp-loading" style="display:flex;align-items:center;justify-content:center;padding:80px 0;gap:12px;color:var(--txt-m)">
+      <div class="spin"></div><span>Loading analysis…</span>
+    </div>
+    <!-- Error -->
+    <div id="dp-error" style="display:none;text-align:center;padding:80px 0">
+      <p style="color:var(--red);margin-bottom:16px" id="dp-error-msg">Document not found</p>
+      <a href="#" style="color:var(--indigo);font-size:14px">Back to home</a>
+    </div>
+    <!-- Score Section -->
+    <div id="dp-score-section" class="dp-section" style="display:none">
+      <div class="dp-score-hero">
+        <div class="dp-score-ring">
+          <svg class="dp-score-svg" viewBox="0 0 120 120" width="120" height="120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="dp-ring" cx="60" cy="60" r="54" fill="none" stroke="url(#score-grad)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"
+              transform="rotate(-90 60 60)"/>
+            <defs><linearGradient id="score-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--indigo)"/><stop offset="100%" stop-color="var(--cyan)"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="dp-score-val"><span id="dp-score-num">0</span></div>
+        </div>
+        <div class="dp-meta">
+          <div class="dp-meta-row">
+            <div><div class="dp-meta-stat" id="dp-ats-score">—</div><div class="dp-meta-lbl">ATS Score</div></div>
+            <div><div id="dp-career-level"><span class="dp-career-badge">—</span></div><div class="dp-meta-lbl">Career Level</div></div>
+          </div>
+          <div class="dp-bars" id="dp-bars"></div>
+        </div>
+      </div>
+      <div class="dp-advice" id="dp-advice" style="display:none"></div>
+    </div>
+    <!-- ATS Issues Section -->
+    <div id="dp-ats-section" class="dp-section" style="display:none">
+      <div class="dp-sec-h">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        ATS Issues
+      </div>
+      <ul class="dp-issues-list" id="dp-ats-issues"></ul>
+    </div>
+    <!-- Improvements Section -->
+    <div id="dp-imp-section" class="dp-section" style="display:none">
+      <div class="dp-sec-h">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Suggested Improvements
+      </div>
+      <div id="dp-improvements"></div>
+    </div>
+    <!-- Rewrites Section -->
+    <div id="dp-rw-section" class="dp-section" style="display:none">
+      <div class="dp-sec-h">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Section Rewrites
+      </div>
+      <div id="dp-rewrites"></div>
+    </div>
+    <!-- Resume Details Section -->
+    <div id="dp-resume-section" class="dp-section" style="display:none">
+      <div class="dp-sec-h">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Resume Details
+      </div>
+      <div id="dp-resume-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Job Match Drawer -->
+<div id="jm-backdrop" onclick="closeJobMatchDrawer()"></div>
+<div id="jm-drawer">
+  <div class="jm-header">
+    <div class="jm-title">Match to Job</div>
+    <button class="jm-close" onclick="closeJobMatchDrawer()" aria-label="Close">&#x2715;</button>
+  </div>
+  <div class="jm-body">
+    <div>
+      <div class="jm-sub-h">Job Description</div>
+      <textarea class="jm-jd" id="jm-jd" placeholder="Paste the job description here..."></textarea>
+    </div>
+    <button class="jm-analyze-btn" id="jm-analyze-btn" onclick="runJobMatch()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analyze Match
+    </button>
+    <div class="jm-error" id="jm-error"></div>
+    <div class="jm-results" id="jm-results"></div>
   </div>
 </div>
 
@@ -633,7 +818,7 @@ async function loadDocs(){
     empty.classList.toggle('on',docs.length===0); grid.innerHTML='';
     docs.forEach(doc=>{
       const el=document.createElement('div'); const isProc=doc.status==='PROCESSING';
-      el.className='doc-card'+(isProc?' proc-pulse':''); el.onclick=()=>openModal(doc.document_id);
+      el.className='doc-card'+(isProc?' proc-pulse':''); el.onclick=()=>{location.hash='#doc/'+doc.document_id;};
       const ts=doc.upload_timestamp?new Date(doc.upload_timestamp).toLocaleString():'';
       const bCls={COMPLETED:'b-ok',PROCESSING:'b-pro',FAILED:'b-err'}[doc.status]||'b-pro';
       el.innerHTML=`<div class="doc-top"><div class="doc-ic"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div style="flex:1;min-width:0"><div class="doc-name">${esc(doc.filename||'document.pdf')}</div><div class="doc-cand">${esc(doc.candidate_name||'—')}</div></div></div><div class="doc-ft"><div class="doc-date">${esc(ts)}</div><div class="badge ${bCls}"><div class="bd"></div>${esc(doc.status||'UNKNOWN')}</div></div>`;
@@ -644,45 +829,337 @@ async function loadDocs(){
   finally{btn.style.opacity='1';}
 }
 
-async function openModal(id){
-  const ov=document.getElementById('modal'), body=document.getElementById('modal-body');
-  ov.classList.add('open'); document.body.style.overflow='hidden';
-  body.innerHTML='<div class="m-loading"><div class="spin"></div><span>Loading…</span></div>';
-  try{
-    const r=await fetch(`${API_BASE_URL}/documents/${id}`);
-    if(!r.ok)throw new Error('Document not found');
-    renderModal(await r.json());
-  }catch(err){body.innerHTML=`<div class="m-loading"><p style="color:var(--red)">${esc(err.message)}</p></div>`;}
-}
 function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHowItWorksModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHowItWorksModal();closeJobMatchDrawer();}});
 
-function renderModal(doc){
-  const p=doc.parsed_data||{};
-  let h=`<div class="m-name">${esc(p.name||doc.filename||'Unknown')}</div><div class="m-contact">`;
-  if(p.email)h+=`<div class="m-ci"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${esc(p.email)}</div>`;
-  if(p.phone)h+=`<div class="m-ci"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l1.88-1.88a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${esc(p.phone)}</div>`;
-  h+=`</div>`;
-  if(p.recruiter_summary)h+=`<div class="m-sec"><div class="m-sec-h">Recruiter Summary</div><div class="summ-box"><p>${esc(p.recruiter_summary)}</p></div></div>`;
-  if(Array.isArray(p.skills)&&p.skills.length)h+=`<div class="m-sec"><div class="m-sec-h">Skills</div><div class="skills-wrap">${p.skills.map(s=>`<div class="skill">${esc(s)}</div>`).join('')}</div></div>`;
+// Reusable resume details renderer (used by modal and analysis page)
+function renderResumeDetails(p, targetEl) {
+  const h = [];
+  h.push('<div class="m-name">'+esc(p.name||'Unknown')+'</div><div class="m-contact">');
+  if(p.email) h.push('<div class="m-ci"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+esc(p.email)+'</div>');
+  if(p.phone) h.push('<div class="m-ci"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l1.88-1.88a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'+esc(p.phone)+'</div>');
+  h.push('</div>');
+  if(p.recruiter_summary) h.push('<div class="m-sec"><div class="m-sec-h">Recruiter Summary</div><div class="summ-box"><p>'+esc(p.recruiter_summary)+'</p></div></div>');
+  if(Array.isArray(p.skills)&&p.skills.length) h.push('<div class="m-sec"><div class="m-sec-h">Skills</div><div class="skills-wrap">'+p.skills.map(function(s){return '<div class="skill">'+esc(s)+'</div>';}).join('')+'</div></div>');
   if(Array.isArray(p.work_experience)&&p.work_experience.length){
-    h+=`<div class="m-sec"><div class="m-sec-h">Work Experience</div>`;
-    p.work_experience.forEach(e=>{
-      h+=`<div class="exp-item"><div class="exp-hdr"><div><div class="exp-role">${esc(e.role||'')}</div><div class="exp-co">${esc(e.company||'')}</div></div><div class="exp-dur">${esc(e.duration||'')}</div></div>`;
-      if(Array.isArray(e.highlights)&&e.highlights.length)h+=`<ul class="exp-ul">${e.highlights.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
-      h+=`</div>`;
+    h.push('<div class="m-sec"><div class="m-sec-h">Work Experience</div>');
+    p.work_experience.forEach(function(e){
+      h.push('<div class="exp-item"><div class="exp-hdr"><div><div class="exp-role">'+esc(e.role||'')+'</div><div class="exp-co">'+esc(e.company||'')+'</div></div><div class="exp-dur">'+esc(e.duration||'')+'</div></div>');
+      if(Array.isArray(e.highlights)&&e.highlights.length) h.push('<ul class="exp-ul">'+e.highlights.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>');
+      h.push('</div>');
     });
-    h+=`</div>`;
+    h.push('</div>');
   }
   if(Array.isArray(p.education)&&p.education.length){
-    h+=`<div class="m-sec"><div class="m-sec-h">Education</div>`;
-    p.education.forEach(e=>{h+=`<div class="edu-item"><div class="edu-deg">${esc(e.degree||'')}${e.field?' in '+esc(e.field):''}</div><div class="edu-inst">${esc(e.institution||'')}${e.year?' &middot; '+esc(e.year):''}</div></div>`;});
-    h+=`</div>`;
+    h.push('<div class="m-sec"><div class="m-sec-h">Education</div>');
+    p.education.forEach(function(e){h.push('<div class="edu-item"><div class="edu-deg">'+esc(e.degree||'')+(e.field?' in '+esc(e.field):'')+'</div><div class="edu-inst">'+esc(e.institution||'')+(e.year?' &middot; '+esc(e.year):'')+'</div></div>');});
+    h.push('</div>');
   }
-  document.getElementById('modal-body').innerHTML=h;
+  targetEl.innerHTML=h.join('');
 }
 
+function renderModal(doc){
+  var p=doc.parsed_data||{};
+  renderResumeDetails(Object.assign({}, p, {name: p.name||doc.filename||'Unknown'}), document.getElementById('modal-body'));
+}
+
+// --- Analysis Page Rendering (Task 10) ---
+let checkedIds = new Set();
+let currentDocId = null;
+
+function renderAnalysisPage(doc) {
+  var a = doc.analysis || null;
+  var p = doc.parsed_data || {};
+
+  document.getElementById('dp-name').textContent = p.name || doc.filename || 'Document';
+
+  // Hide all analysis sections first
+  ['dp-score-section','dp-ats-section','dp-imp-section','dp-rw-section','dp-resume-section'].forEach(function(id) {
+    document.getElementById(id).style.display = 'none';
+  });
+
+  // Resume details section always renders if parsed_data exists
+  if (p && (p.name || p.email || p.skills)) {
+    document.getElementById('dp-resume-section').style.display = '';
+    renderResumeDetails(p, document.getElementById('dp-resume-body'));
+  }
+
+  if (!a) return; // old document without analysis
+
+  if (a.overall_score != null) {
+    document.getElementById('dp-score-section').style.display = '';
+    renderScoreHero(a);
+  }
+  if (a.ats && Array.isArray(a.ats.issues) && a.ats.issues.length) {
+    document.getElementById('dp-ats-section').style.display = '';
+    renderATSSection(a.ats);
+  }
+  if (Array.isArray(a.improvements) && a.improvements.length) {
+    document.getElementById('dp-imp-section').style.display = '';
+    renderImprovements(a.improvements);
+  }
+  if (Array.isArray(a.rewrites) && a.rewrites.length) {
+    document.getElementById('dp-rw-section').style.display = '';
+    renderRewrites(a.rewrites);
+  }
+}
+
+function renderScoreHero(a) {
+  var score = a.overall_score || 0;
+  var ring = document.getElementById('dp-ring');
+  var scoreNum = document.getElementById('dp-score-num');
+
+  // Reset ring
+  ring.style.transition = 'none';
+  ring.setAttribute('stroke-dashoffset', '339.3');
+  scoreNum.textContent = '0';
+
+  // Animate ring after a frame
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      ring.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+      ring.setAttribute('stroke-dashoffset', String(339.3 * (1 - score / 100)));
+      // Animate number
+      var start = null;
+      var dur = 1200;
+      function step(ts) {
+        if (!start) start = ts;
+        var pct = Math.min((ts - start) / dur, 1);
+        scoreNum.textContent = Math.round(score * pct);
+        if (pct < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  });
+
+  // ATS score
+  var atsScore = a.ats ? (a.ats.score != null ? a.ats.score : '\u2014') : '\u2014';
+  document.getElementById('dp-ats-score').textContent = atsScore + (atsScore !== '\u2014' ? '/100' : '');
+
+  // Career level
+  var level = a.career_level || '\u2014';
+  document.getElementById('dp-career-level').innerHTML = '<span class="dp-career-badge">'+esc(level)+'</span>';
+
+  // Category bars
+  var cats = a.categories || {};
+  var barsEl = document.getElementById('dp-bars');
+  var barsH = [];
+  Object.keys(cats).forEach(function(name) {
+    var pct = typeof cats[name] === 'number' ? cats[name] : 0;
+    barsH.push('<div class="dp-bar-row"><div class="dp-bar-label">'+esc(name)+'</div><div class="dp-bar-track"><div class="dp-bar-fill" data-pct="'+pct+'" style="width:0%"></div></div><div class="dp-bar-pct">'+pct+'%</div></div>');
+  });
+  barsEl.innerHTML = barsH.join('');
+
+  // Animate bar widths after a tick
+  requestAnimationFrame(function() {
+    barsEl.querySelectorAll('.dp-bar-fill').forEach(function(bar) {
+      bar.style.width = bar.getAttribute('data-pct') + '%';
+    });
+  });
+
+  // Career advice
+  var adviceEl = document.getElementById('dp-advice');
+  if (a.career_advice) {
+    adviceEl.style.display = '';
+    adviceEl.textContent = a.career_advice;
+  } else {
+    adviceEl.style.display = 'none';
+  }
+}
+
+function renderATSSection(ats) {
+  var el = document.getElementById('dp-ats-issues');
+  el.innerHTML = ats.issues.map(function(issue) { return '<li>'+esc(issue)+'</li>'; }).join('');
+}
+
+function renderImprovements(improvements) {
+  var el = document.getElementById('dp-improvements');
+  var h = [];
+  improvements.forEach(function(imp, i) {
+    var id = 'imp-' + i;
+    var prio = (imp.priority || 'medium').toLowerCase();
+    h.push('<div class="imp-card" id="'+id+'" onclick="toggleImprovement(this,\''+id+'\')">');
+    h.push('<div class="imp-check">&#x2713;</div>');
+    h.push('<div class="imp-text">'+esc(imp.text || imp.suggestion || '')+'</div>');
+    h.push('<span class="imp-badge '+esc(prio)+'">'+esc(prio)+'</span>');
+    h.push('</div>');
+  });
+  el.innerHTML = h.join('');
+  // Restore checked state
+  checkedIds.forEach(function(id) {
+    var card = document.getElementById(id);
+    if (card) card.classList.add('checked');
+  });
+}
+
+function toggleImprovement(card, id) {
+  if (checkedIds.has(id)) {
+    checkedIds.delete(id);
+    card.classList.remove('checked');
+  } else {
+    checkedIds.add(id);
+    card.classList.add('checked');
+  }
+}
+
+function renderRewrites(rewrites) {
+  var el = document.getElementById('dp-rewrites');
+  var h = [];
+  rewrites.forEach(function(rw, i) {
+    var sugEsc = esc(rw.suggested || '');
+    h.push('<div class="rw-card" id="rw-'+i+'">');
+    h.push('<div class="rw-header" onclick="toggleRewrite('+i+')"><div class="rw-header-title">'+esc(rw.section || 'Section ' + (i+1))+'</div><div class="rw-chevron">&#x25BC;</div></div>');
+    h.push('<div class="rw-body">');
+    if (rw.original) h.push('<div class="rw-original">'+esc(rw.original)+'</div>');
+    if (rw.suggested) h.push('<div class="rw-suggested">'+sugEsc+'</div>');
+    if (rw.suggested) h.push('<button class="rw-copy-btn" onclick="event.stopPropagation();copyRewrite(this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>');
+    h.push('</div></div>');
+  });
+  el.innerHTML = h.join('');
+}
+
+function toggleRewrite(i) {
+  var card = document.getElementById('rw-' + i);
+  if (card) card.classList.toggle('open');
+}
+
+function copyRewrite(btn) {
+  var body = btn.closest('.rw-body');
+  var sugEl = body ? body.querySelector('.rw-suggested') : null;
+  var text = sugEl ? sugEl.textContent : '';
+  navigator.clipboard.writeText(text).then(function() {
+    var orig = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(function() { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+  }).catch(function() { toast('Failed to copy', 'err'); });
+}
+
+// --- Hash Routing + Job Match Drawer (Task 11) ---
+
+function renderPage() {
+  var hash = location.hash;
+  if (hash.indexOf('#doc/') === 0) {
+    var id = hash.slice(5);
+    if (id) { showAnalysisPage(id); return; }
+  }
+  showHomePage();
+}
+
+function showHomePage() {
+  document.getElementById('doc-page').style.display = 'none';
+  document.getElementById('main-content').style.display = '';
+  currentDocId = null;
+  closeJobMatchDrawer();
+}
+
+async function showAnalysisPage(id) {
+  checkedIds = new Set();
+  currentDocId = id;
+
+  document.getElementById('main-content').style.display = 'none';
+  var dp = document.getElementById('doc-page');
+  dp.style.display = '';
+  dp.scrollTop = 0;
+
+  // Show loading, hide error and content sections
+  document.getElementById('dp-loading').style.display = 'flex';
+  document.getElementById('dp-error').style.display = 'none';
+  ['dp-score-section','dp-ats-section','dp-imp-section','dp-rw-section','dp-resume-section'].forEach(function(sid) {
+    document.getElementById(sid).style.display = 'none';
+  });
+
+  try {
+    var r = await fetch(API_BASE_URL+'/documents/'+encodeURIComponent(id));
+    if (!r.ok) {
+      if (r.status === 404) throw new Error('Document not found');
+      throw new Error('Failed to load document');
+    }
+    var doc = await r.json();
+    document.getElementById('dp-loading').style.display = 'none';
+    renderAnalysisPage(doc);
+  } catch (err) {
+    document.getElementById('dp-loading').style.display = 'none';
+    document.getElementById('dp-error').style.display = '';
+    document.getElementById('dp-error-msg').textContent = err.message;
+  }
+}
+
+// Job Match Drawer
+function openJobMatchDrawer() {
+  document.getElementById('jm-backdrop').classList.add('open');
+  document.getElementById('jm-drawer').classList.add('open');
+}
+
+function closeJobMatchDrawer() {
+  document.getElementById('jm-backdrop').classList.remove('open');
+  document.getElementById('jm-drawer').classList.remove('open');
+}
+
+async function runJobMatch() {
+  var jd = document.getElementById('jm-jd').value.trim();
+  if (!jd) { toast('Please paste a job description', 'err'); return; }
+  if (!currentDocId) { toast('No document selected', 'err'); return; }
+
+  var btn = document.getElementById('jm-analyze-btn');
+  var errEl = document.getElementById('jm-error');
+  var resEl = document.getElementById('jm-results');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  errEl.style.display = 'none';
+  resEl.innerHTML = '';
+
+  try {
+    var r = await fetch(API_BASE_URL+'/documents/'+encodeURIComponent(currentDocId)+'/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_description: jd })
+    });
+    if (!r.ok) throw new Error('Match analysis failed');
+    var data = await r.json();
+    renderJobMatchResults(data);
+  } catch (err) {
+    errEl.style.display = '';
+    errEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Analyze Match';
+  }
+}
+
+function renderJobMatchResults(data) {
+  var el = document.getElementById('jm-results');
+  var h = [];
+
+  // Score
+  if (data.match_score != null) {
+    h.push('<div class="jm-score-row"><div><div class="jm-score-num">'+esc(data.match_score)+'<span style="font-size:14px;color:var(--txt-d)">%</span></div><div class="jm-score-lbl">Match Score</div></div></div>');
+  }
+
+  // Matched skills
+  if (Array.isArray(data.matched_skills) && data.matched_skills.length) {
+    h.push('<div><div class="jm-sub-h">Matched Skills</div><div class="jm-chip-wrap">'+data.matched_skills.map(function(s){return '<div class="jm-chip match">'+esc(s)+'</div>';}).join('')+'</div></div>');
+  }
+
+  // Missing skills
+  if (Array.isArray(data.missing_skills) && data.missing_skills.length) {
+    h.push('<div><div class="jm-sub-h">Missing Skills</div><div class="jm-chip-wrap">'+data.missing_skills.map(function(s){return '<div class="jm-chip miss">'+esc(s)+'</div>';}).join('')+'</div></div>');
+  }
+
+  // Recommendations
+  if (data.recommendations) {
+    h.push('<div><div class="jm-sub-h">Recommendations</div><div class="jm-rec">'+esc(data.recommendations)+'</div></div>');
+  }
+
+  el.innerHTML = h.join('');
+}
+
+// Hash routing
+window.addEventListener('hashchange', renderPage);
+
+// Initial load
 loadDocs();
+renderPage();
 </script>
 </body>
 </html>
