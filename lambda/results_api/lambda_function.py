@@ -10,10 +10,12 @@ import logging
 from decimal import Decimal
 
 import boto3
+from openai import OpenAI
 
 # --- Configuration ---
 DYNAMODB_TABLE = os.environ["DYNAMODB_TABLE"]
 S3_BUCKET = os.environ["S3_BUCKET"]
+SSM_PARAMETER_NAME = os.environ["SSM_PARAMETER_NAME"]
 
 # --- Logging ---
 logger = logging.getLogger()
@@ -21,6 +23,7 @@ logger.setLevel(logging.INFO)
 
 # --- AWS Clients ---
 s3_client = boto3.client("s3")
+ssm_client = boto3.client("ssm")
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(DYNAMODB_TABLE)
 
@@ -28,9 +31,23 @@ table = dynamodb.Table(DYNAMODB_TABLE)
 CORS_HEADERS = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
 }
+
+# --- OpenAI API Key Cache ---
+_openai_api_key = None
+
+# --- Job Match System Prompt ---
+JOB_MATCH_SYSTEM_PROMPT = """You are an expert resume-to-job-description matcher. Given a candidate's parsed resume data and a job description, analyze how well the candidate matches the role.
+
+You MUST return a JSON object with exactly these fields (no others):
+- "match_score": an integer from 0 to 100 representing overall match percentage
+- "strong_matches": an array of strings listing skills/experience the candidate clearly has that the job requires
+- "missing_keywords": an array of strings listing important keywords/skills from the job description absent from the resume
+- "tailoring_tips": an array of 2 to 4 strings with specific actionable advice for tailoring the resume to this job
+
+These field names are hard requirements. Do not rename, omit, or add fields."""
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -48,6 +65,18 @@ def response(status_code, body):
         "headers": CORS_HEADERS,
         "body": json.dumps(body, cls=DecimalEncoder),
     }
+
+
+def get_openai_api_key():
+    """Retrieve and cache the OpenAI API key from SSM Parameter Store."""
+    global _openai_api_key
+    if _openai_api_key is None:
+        result = ssm_client.get_parameter(
+            Name=SSM_PARAMETER_NAME,
+            WithDecryption=True,
+        )
+        _openai_api_key = result["Parameter"]["Value"]
+    return _openai_api_key
 
 
 def get_upload_url(session_id):
@@ -85,7 +114,7 @@ def list_documents(session_id):
     # Sort by upload timestamp descending
     items.sort(key=lambda x: x.get("upload_timestamp", ""), reverse=True)
 
-    # Return summary view (exclude full parsed_data for list view)
+    # Return summary view (exclude full parsed_data and analysis for list view)
     documents = []
     for item in items:
         doc = {
@@ -117,6 +146,48 @@ def get_document(document_id):
     return response(200, item)
 
 
+def job_match(document_id, job_description):
+    """Match a job description against a parsed resume document."""
+    # Fetch item from DynamoDB
+    result = table.get_item(Key={"document_id": document_id})
+    item = result.get("Item")
+
+    if not item:
+        logger.warning("Document not found for job match: %s", document_id)
+        return response(404, {"error": "Document not found"})
+
+    parsed_data = item.get("parsed_data")
+    if not parsed_data:
+        logger.warning("Document %s has no parsed_data yet", document_id)
+        return response(400, {"error": "Document has not yet been processed"})
+
+    # Serialize parsed_data using DecimalEncoder for the prompt
+    parsed_data_str = json.dumps(parsed_data, cls=DecimalEncoder)
+
+    api_key = get_openai_api_key()
+    client = OpenAI(api_key=api_key)
+
+    user_message = (
+        f"Resume data:\n{parsed_data_str}\n\n"
+        f"Job description:\n{job_description}"
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": JOB_MATCH_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.3,
+        max_tokens=1000,
+        response_format={"type": "json_object"},
+    )
+
+    result_content = completion.choices[0].message.content
+    logger.info("Job match completed for document: %s", document_id)
+    return response(200, json.loads(result_content))
+
+
 def lambda_handler(event, context):
     """Main handler for API Gateway proxy integration."""
     logger.info("Request: %s %s", event.get("httpMethod"), event.get("path"))
@@ -144,6 +215,28 @@ def lambda_handler(event, context):
                 return get_document(path_params["id"])
             else:
                 return response(404, {"error": "Not found"})
+
+        elif http_method == "POST":
+            body_str = event.get("body") or "{}"
+            try:
+                body = json.loads(body_str)
+            except (json.JSONDecodeError, TypeError):
+                body = {}
+
+            # Route POST /documents/{id}/job-match
+            if path_params.get("id") and path.endswith("/job-match"):
+                doc_id = path_params["id"]
+                job_description = body.get("job_description", "")
+
+                if not job_description or not job_description.strip():
+                    return response(400, {"error": "job_description is required"})
+                if len(job_description) > 5000:
+                    return response(400, {"error": "job_description must be 5000 characters or fewer"})
+
+                return job_match(doc_id, job_description)
+            else:
+                return response(404, {"error": "Not found"})
+
         else:
             return response(405, {"error": "Method not allowed"})
 
