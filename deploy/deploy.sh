@@ -488,6 +488,11 @@ DOC_ID_RESOURCE=$(create_api_resource "$DOCUMENTS_ID" "{id}")
 setup_method "$DOC_ID_RESOURCE" "GET"
 setup_cors "$DOC_ID_RESOURCE"
 
+# /documents/{id}/job-match
+JOB_MATCH_RESOURCE=$(create_api_resource "$DOC_ID_RESOURCE" "job-match")
+setup_method "$JOB_MATCH_RESOURCE" "POST"
+setup_cors "$JOB_MATCH_RESOURCE"
+
 # Add Lambda permission for API Gateway
 aws lambda add-permission \
     --function-name "$API_FUNCTION" \
