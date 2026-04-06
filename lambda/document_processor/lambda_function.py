@@ -109,6 +109,47 @@ SYSTEM_PROMPT = """You are a resume parser. Given the text of a resume, extract 
 Return ONLY valid JSON. Extract as much information as possible from the text. If a field cannot be determined, use null for strings or empty arrays for lists."""
 
 
+ANALYSIS_SYSTEM_PROMPT = """You are a professional resume analyst. Given structured parsed resume data and the raw resume text, evaluate the resume quality and return a JSON analysis object.
+
+Return ONLY valid JSON matching this exact schema:
+
+{
+  "score": {
+    "breakdown": {
+      "contact_info":  { "score": <int>, "max": 20, "note": "<string>" },
+      "skills":        { "score": <int>, "max": 25, "note": "<string>" },
+      "experience":    { "score": <int>, "max": 30, "note": "<string>" },
+      "education":     { "score": <int>, "max": 15, "note": "<string>" },
+      "formatting":    { "score": <int>, "max": 10, "note": "<string>" }
+    }
+  },
+  "ats": {
+    "score": <int 0-100>,
+    "issues": ["<string>", ...]
+  },
+  "career_level": "<entry|mid|senior>",
+  "career_level_advice": "<string>",
+  "improvements": [
+    { "id": "i1", "priority": "high|medium|low", "text": "<string>" },
+    ...
+  ],
+  "rewrites": [
+    { "section": "<string>", "original": "<string>", "suggested": "<string>" },
+    ...
+  ]
+}
+
+SCORING HARD LIMITS: contact_info MAX is 20, skills MAX is 25, experience MAX is 30, education MAX is 15, formatting MAX is 10. These are hard limits — never return a score value above its category max.
+
+Do NOT include a "total" field anywhere inside "score" — the total is computed server-side.
+
+For "improvements": return 5–8 items ordered by priority (high → medium → low). Each item must have a unique id (i1, i2, ...), a priority of "high", "medium", or "low", and a specific, actionable text recommendation.
+
+For "rewrites": return 2–3 rewrite suggestions targeting the weakest sections. Each item must have a "section" name, the "original" text snippet from the resume, and a "suggested" improved version.
+
+Return ONLY valid JSON. No additional commentary or explanation."""
+
+
 def analyze_resume_with_llm(text, api_key):
     """Send extracted text to OpenAI gpt-4o-mini for structured resume analysis."""
     client = OpenAI(api_key=api_key)
@@ -126,6 +167,35 @@ def analyze_resume_with_llm(text, api_key):
 
     result = json.loads(response.choices[0].message.content)
     logger.info("LLM analysis completed successfully")
+    return result
+
+
+def analyze_resume_deep(parsed_data, raw_text, api_key):
+    """Send parsed resume data and raw text to OpenAI gpt-4o-mini for deep quality analysis."""
+    client = OpenAI(api_key=api_key)
+
+    user_message = (
+        f"Parsed resume data:\n{json.dumps(parsed_data)}\n\n"
+        f"Raw resume text:\n{raw_text[:6000]}"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.2,
+        max_tokens=2500,
+    )
+
+    result = json.loads(response.choices[0].message.content)
+
+    # Compute total server-side — never trust the LLM to sum correctly
+    result["score"]["total"] = int(sum(v["score"] for v in result["score"]["breakdown"].values()))
+
+    logger.info("Deep resume analysis completed successfully")
     return result
 
 
