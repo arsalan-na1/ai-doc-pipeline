@@ -176,7 +176,7 @@ def job_match(document_id, job_description):
     )
 
     completion = client.chat.completions.create(
-        model="qwen/qwen3-coder:free",
+        model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[
             {"role": "system", "content": JOB_MATCH_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},

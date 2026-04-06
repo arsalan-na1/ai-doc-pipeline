@@ -158,7 +158,7 @@ def analyze_resume_with_llm(text, api_key):
     )
 
     response = client.chat.completions.create(
-        model="qwen/qwen3-coder:free",
+        model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Parse the following resume text:\n\n{text}"},
@@ -186,7 +186,7 @@ def analyze_resume_deep(parsed_data, raw_text, api_key):
     )
 
     response = client.chat.completions.create(
-        model="qwen/qwen3-coder:free",
+        model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[
             {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
