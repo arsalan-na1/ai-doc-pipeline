@@ -106,7 +106,7 @@ SAMPLE_PARSED_DATA = {
     "name": "Jane Doe",
     "email": "jane@example.com",
     "phone": "555-1234",
-    "skills": ["Python", "AWS"],
+    "skills": ["Python", "Go"],
     "work_experience": [],
     "education": [],
     "recruiter_summary": "Strong engineer with 5 years of Python experience.",
