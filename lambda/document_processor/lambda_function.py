@@ -270,9 +270,17 @@ def lambda_handler(event, context):
         api_key = get_openai_api_key()
         parsed_data = analyze_resume_with_llm(extracted_text, api_key)
 
+        # Deep analysis (optional — failure must not block storing results)
+        analysis_data = None
+        try:
+            analysis_data = analyze_resume_deep(parsed_data, extracted_text, api_key)
+        except Exception as e:
+            logger.error("Deep resume analysis failed, continuing without it: %s", str(e), exc_info=True)
+
         # Store successful results
         store_results(document_id, filename, "COMPLETED", session_id=session_id,
-                     parsed_data=parsed_data, extracted_text=extracted_text)
+                     parsed_data=parsed_data, extracted_text=extracted_text,
+                     analysis=analysis_data)
 
         logger.info("Document processing completed successfully: %s", document_id)
         return {"statusCode": 200, "body": json.dumps({"document_id": document_id, "status": "COMPLETED"})}

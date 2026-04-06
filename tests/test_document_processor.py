@@ -248,3 +248,93 @@ class TestAnalyzeResumeDeep:
         assert a_count <= 6000, (
             f"User message contains {a_count} 'A' chars; expected at most 6000"
         )
+
+
+# ---------------------------------------------------------------------------
+# S3 event fixture shared by lambda_handler tests
+# ---------------------------------------------------------------------------
+
+SAMPLE_S3_EVENT = {
+    "Records": [{
+        "s3": {
+            "bucket": {"name": "test-bucket"},
+            "object": {"key": "uploads/test-session/test-file.pdf"}
+        }
+    }]
+}
+
+
+class TestLambdaHandler:
+    """Tests for lambda_handler() — deep-analysis wiring."""
+
+    def test_lambda_handler_passes_analysis_to_store_results(self):
+        """lambda_handler must call store_results with analysis=<analysis_dict>
+        when analyze_resume_deep succeeds."""
+        analysis_result = {
+            "score": {"breakdown": {}, "total": 80},
+            "ats": {"score": 75, "issues": []},
+            "career_level": "mid",
+            "career_level_advice": "Good job.",
+            "improvements": [],
+            "rewrites": [],
+        }
+
+        fake_pdf_bytes = b"%PDF-1.4 fake"
+        fake_s3_response = {"Body": MagicMock(read=MagicMock(return_value=fake_pdf_bytes))}
+
+        with patch("lambda_function.s3_client") as mock_s3, \
+             patch("lambda_function.extract_text_from_pdf", return_value="resume text"), \
+             patch("lambda_function.analyze_resume_with_llm", return_value=SAMPLE_PARSED_DATA), \
+             patch("lambda_function.analyze_resume_deep", return_value=analysis_result), \
+             patch("lambda_function.store_results") as mock_store, \
+             patch("lambda_function.get_openai_api_key", return_value="sk-test"):
+
+            mock_s3.get_object.return_value = fake_s3_response
+
+            lambda_function.lambda_handler(SAMPLE_S3_EVENT, None)
+
+        # Find the COMPLETED store_results call
+        completed_call = None
+        for call in mock_store.call_args_list:
+            args, kwargs = call
+            status = args[2] if len(args) > 2 else kwargs.get("status", "")
+            if status == "COMPLETED":
+                completed_call = call
+                break
+
+        assert completed_call is not None, "store_results was never called with COMPLETED status"
+        _, kwargs = completed_call
+        assert "analysis" in kwargs, "store_results was not called with analysis= kwarg"
+        assert kwargs["analysis"] == analysis_result
+
+    def test_lambda_handler_completes_without_analysis_when_deep_fails(self):
+        """lambda_handler must call store_results with analysis=None and return
+        statusCode 200 when analyze_resume_deep raises an exception."""
+        fake_pdf_bytes = b"%PDF-1.4 fake"
+        fake_s3_response = {"Body": MagicMock(read=MagicMock(return_value=fake_pdf_bytes))}
+
+        with patch("lambda_function.s3_client") as mock_s3, \
+             patch("lambda_function.extract_text_from_pdf", return_value="resume text"), \
+             patch("lambda_function.analyze_resume_with_llm", return_value=SAMPLE_PARSED_DATA), \
+             patch("lambda_function.analyze_resume_deep", side_effect=Exception("LLM timeout")), \
+             patch("lambda_function.store_results") as mock_store, \
+             patch("lambda_function.get_openai_api_key", return_value="sk-test"):
+
+            mock_s3.get_object.return_value = fake_s3_response
+
+            result = lambda_function.lambda_handler(SAMPLE_S3_EVENT, None)
+
+        assert result["statusCode"] == 200
+
+        # Find the COMPLETED store_results call
+        completed_call = None
+        for call in mock_store.call_args_list:
+            args, kwargs = call
+            status = args[2] if len(args) > 2 else kwargs.get("status", "")
+            if status == "COMPLETED":
+                completed_call = call
+                break
+
+        assert completed_call is not None, "store_results was never called with COMPLETED status"
+        _, kwargs = completed_call
+        assert kwargs.get("analysis") is None
