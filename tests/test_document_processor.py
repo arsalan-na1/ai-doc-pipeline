@@ -117,6 +117,56 @@ SAMPLE_PARSED_DATA = {
 # Tests
 # ---------------------------------------------------------------------------
 
+class TestStoreResults:
+    """Tests for store_results() — specifically the analysis field handling."""
+
+    def test_store_results_saves_analysis_field(self):
+        """store_results() must persist the analysis dict as item['analysis'],
+        with float values converted to Decimal."""
+        from decimal import Decimal
+
+        analysis = {
+            "score": {
+                "breakdown": {
+                    "contact_info": {"score": 18, "max": 20, "note": "Good"},
+                },
+                "total": 18,
+            },
+            "ats": {"score": 71.5, "issues": []},
+            "career_level": "mid",
+            "career_level_advice": "Add metrics.",
+            "improvements": [],
+            "rewrites": [],
+        }
+
+        mock_table.reset_mock()
+        lambda_function.store_results(
+            document_id="doc123",
+            filename="resume.pdf",
+            status="COMPLETED",
+            analysis=analysis,
+        )
+
+        assert mock_table.put_item.called
+        stored_item = mock_table.put_item.call_args[1]["Item"]
+        assert "analysis" in stored_item
+        # Float 71.5 must be converted to Decimal
+        assert stored_item["analysis"]["ats"]["score"] == Decimal("71.5")
+
+    def test_store_results_without_analysis_omits_field(self):
+        """store_results() called without analysis arg must not include 'analysis' key."""
+        mock_table.reset_mock()
+        lambda_function.store_results(
+            document_id="doc456",
+            filename="resume.pdf",
+            status="COMPLETED",
+        )
+
+        assert mock_table.put_item.called
+        stored_item = mock_table.put_item.call_args[1]["Item"]
+        assert "analysis" not in stored_item
+
+
 class TestAnalyzeResumeDeep:
     """Tests for the (not-yet-implemented) analyze_resume_deep() function."""
 

@@ -199,7 +199,7 @@ def analyze_resume_deep(parsed_data, raw_text, api_key):
     return result
 
 
-def store_results(document_id, filename, status, session_id="", parsed_data=None, extracted_text="", error_message=None):
+def store_results(document_id, filename, status, session_id="", parsed_data=None, extracted_text="", error_message=None, analysis=None):
     """Store processing results in DynamoDB."""
     item = {
         "document_id": document_id,
@@ -218,6 +218,9 @@ def store_results(document_id, filename, status, session_id="", parsed_data=None
 
     if error_message:
         item["error_message"] = error_message
+
+    if analysis:
+        item["analysis"] = json.loads(json.dumps(analysis), parse_float=Decimal)
 
     table.put_item(Item=item)
     logger.info("Results stored in DynamoDB: document_id=%s, status=%s", document_id, status)
