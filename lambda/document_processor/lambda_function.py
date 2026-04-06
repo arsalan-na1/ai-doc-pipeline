@@ -150,6 +150,26 @@ For "rewrites": return 2–3 rewrite suggestions targeting the weakest sections.
 Return ONLY valid JSON. No additional commentary or explanation."""
 
 
+def _call_llm_json(client, model, messages, temperature, max_tokens, max_retries=2):
+    """Call LLM and parse JSON response, retrying on malformed JSON."""
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        content = response.choices[0].message.content
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            last_error = e
+            logger.warning("JSON parse failed (attempt %d/%d): %s", attempt, max_retries, str(e))
+    raise last_error
+
+
 def analyze_resume_with_llm(text, api_key):
     """Send extracted text to Qwen3 Coder via OpenRouter for structured resume analysis."""
     client = OpenAI(
@@ -157,18 +177,16 @@ def analyze_resume_with_llm(text, api_key):
         api_key=api_key,
     )
 
-    response = client.chat.completions.create(
+    result = _call_llm_json(
+        client,
         model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Parse the following resume text:\n\n{text}"},
         ],
-        response_format={"type": "json_object"},
         temperature=0.1,
         max_tokens=2000,
     )
-
-    result = json.loads(response.choices[0].message.content)
     logger.info("LLM analysis completed successfully")
     return result
 
@@ -185,18 +203,16 @@ def analyze_resume_deep(parsed_data, raw_text, api_key):
         f"Raw resume text:\n{raw_text[:6000]}"
     )
 
-    response = client.chat.completions.create(
+    result = _call_llm_json(
+        client,
         model="nvidia/nemotron-3-super-120b-a12b:free",
         messages=[
             {"role": "system", "content": ANALYSIS_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        response_format={"type": "json_object"},
         temperature=0.2,
         max_tokens=2500,
     )
-
-    result = json.loads(response.choices[0].message.content)
 
     # Compute total server-side — never trust the LLM to sum correctly
     result["score"]["total"] = int(sum(v["score"] for v in result["score"]["breakdown"].values()))
