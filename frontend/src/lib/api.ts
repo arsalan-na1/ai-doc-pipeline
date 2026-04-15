@@ -6,7 +6,7 @@ export interface DocSummary {
   document_id: string
   filename: string
   upload_timestamp: string
-  status: "PROCESSING" | "PROCESSED" | "FAILED" | string
+  status: "PROCESSING" | "COMPLETED" | "FAILED" | string
   candidate_name?: string
 }
 
@@ -97,7 +97,7 @@ export async function pollDocument(documentId: string, maxMs = 120_000, interval
   const deadline = Date.now() + maxMs
   while (Date.now() < deadline) {
     const doc = await getDocument(documentId)
-    if (doc.status === "PROCESSED" || doc.status === "FAILED") return doc
+    if (doc.status === "COMPLETED" || doc.status === "FAILED") return doc
     await new Promise(r => setTimeout(r, intervalMs))
   }
   throw new Error("Polling timed out")

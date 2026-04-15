@@ -67,7 +67,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       const doc = await pollDocument(docId)
 
-      if (doc.status === "PROCESSED") {
+      if (doc.status === "COMPLETED") {
         setUploadState("done")
         setUploadMsg("Analysis complete!")
         onNavigate(docId)
@@ -180,14 +180,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   </div>
                   <span
                     className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      doc.status === "PROCESSED"
+                      doc.status === "COMPLETED"
                         ? "bg-emerald-500/20 text-emerald-300"
                         : doc.status === "FAILED"
                         ? "bg-red-500/20 text-red-300"
                         : "bg-yellow-500/20 text-yellow-300"
                     }`}
                   >
-                    {doc.status === "PROCESSED" ? "Done" : doc.status === "FAILED" ? "Failed" : "Processing…"}
+                    {doc.status === "COMPLETED" ? "Done" : doc.status === "FAILED" ? "Failed" : "Processing…"}
                   </span>
                 </li>
               ))}
