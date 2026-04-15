@@ -556,18 +556,19 @@ EOF
 
 aws s3api put-bucket-policy --bucket "$S3_FRONTEND_BUCKET_NAME" --policy "$BUCKET_POLICY"
 
-# Inject API URL into frontend and upload
-FRONTEND_FILE="$PROJECT_DIR/frontend/index.html"
-if [ -f "$FRONTEND_FILE" ]; then
-    # Replace placeholder API URL with actual URL
-    TEMP_HTML="$SCRIPT_DIR/_index_tmp.html"
-    sed "s|__API_BASE_URL__|$API_URL|g" "$FRONTEND_FILE" > "$TEMP_HTML"
-    aws s3 cp "$TEMP_HTML" "s3://$S3_FRONTEND_BUCKET_NAME/index.html" \
-        --content-type "text/html"
-    rm -f "$TEMP_HTML"
-    echo "  Frontend uploaded with API URL injected."
+# Build React frontend and sync to S3
+FRONTEND_DIR="$PROJECT_DIR/frontend"
+if [ -d "$FRONTEND_DIR" ]; then
+    echo "  Building frontend..."
+    # Write env so Vite picks up the correct API URL at build time
+    printf "VITE_API_BASE_URL=%s\nVITE_S3_BUCKET=%s\n" "$API_URL" "$S3_BUCKET_NAME" \
+        > "$FRONTEND_DIR/.env.production.local"
+    (cd "$FRONTEND_DIR" && npm install --silent && npm run build)
+    aws s3 sync "$FRONTEND_DIR/dist/" "s3://$S3_FRONTEND_BUCKET_NAME" \
+        --delete --no-progress
+    echo "  Frontend built and synced to s3://$S3_FRONTEND_BUCKET_NAME"
 else
-    echo "  [!] Frontend file not found at: $FRONTEND_FILE"
+    echo "  [!] Frontend directory not found at: $FRONTEND_DIR"
 fi
 
 S3_FRONTEND_URL="http://${S3_FRONTEND_BUCKET_NAME}.s3-website-${AWS_REGION}.amazonaws.com"
@@ -626,8 +627,24 @@ if [ -n "$CF_DOMAIN" ]; then
     echo "  HTTPS URL: $FRONTEND_URL"
     echo "  Note: Distribution takes 5-10 minutes to deploy globally."
 else
-    echo "  [!] CloudFront creation failed or already exists. Using S3 URL."
-    FRONTEND_URL="$S3_FRONTEND_URL"
+    echo "  [!] CloudFront creation failed or already exists. Checking for existing distribution..."
+    CF_ID=$(aws cloudfront list-distributions \
+        --query "DistributionList.Items[?Comment=='AI Document Pipeline Frontend'].Id" \
+        --output text 2>/dev/null || echo "")
+    CF_DOMAIN=$(aws cloudfront list-distributions \
+        --query "DistributionList.Items[?Comment=='AI Document Pipeline Frontend'].DomainName" \
+        --output text 2>/dev/null || echo "")
+    FRONTEND_URL="${CF_DOMAIN:+https://$CF_DOMAIN}"
+    FRONTEND_URL="${FRONTEND_URL:-$S3_FRONTEND_URL}"
+fi
+
+# Invalidate CloudFront cache if we have a distribution ID
+if [ -n "$CF_ID" ]; then
+    echo "  Invalidating CloudFront cache for distribution: $CF_ID"
+    aws cloudfront create-invalidation \
+        --distribution-id "$CF_ID" \
+        --paths "/*" \
+        --output text --query 'Invalidation.Id' | xargs -I{} echo "  Invalidation ID: {}" || true
 fi
 
 # ============================================================================

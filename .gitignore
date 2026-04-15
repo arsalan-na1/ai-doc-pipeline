@@ -1,3 +1,8 @@
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.env.production.local
+
 # Python
 __pycache__/
 *.py[cod]
