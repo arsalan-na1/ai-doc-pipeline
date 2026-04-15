@@ -71,17 +71,21 @@ export function TextScramble({ text, className = "", spanClassName = "" }: TextS
     >
       <span className={`relative font-mono text-lg tracking-widest uppercase ${spanClassName}`}>
         {displayText.split("").map((char, i) => (
-          <span
-            key={i}
-            className={`inline-block transition-all duration-150 ${
-              isScrambling && char !== text[i] ? "text-primary scale-110" : "text-foreground"
-            }`}
-            style={{
-              transitionDelay: `${i * 10}ms`,
-            }}
-          >
-            {char}
-          </span>
+          char === " " ? (
+            <span key={i} className="inline-block w-[0.4em]" />
+          ) : (
+            <span
+              key={i}
+              className={`inline-block transition-all duration-150 ${
+                isScrambling && char !== text[i] ? "text-primary scale-110" : "text-foreground"
+              }`}
+              style={{
+                transitionDelay: `${i * 10}ms`,
+              }}
+            >
+              {char}
+            </span>
+          )
         ))}
       </span>
 
