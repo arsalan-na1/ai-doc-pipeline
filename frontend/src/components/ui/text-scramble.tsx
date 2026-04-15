@@ -70,23 +70,37 @@ export function TextScramble({ text, className = "", spanClassName = "" }: TextS
       onMouseLeave={handleMouseLeave}
     >
       <span className={`relative font-mono text-lg tracking-widest uppercase ${spanClassName}`}>
-        {displayText.split("").map((char, i) => (
-          char === " " ? (
-            <span key={i} className="inline-block w-[0.4em]" />
-          ) : (
-            <span
-              key={i}
-              className={`inline-block transition-all duration-150 ${
-                isScrambling && char !== text[i] ? "text-primary scale-110" : "text-foreground"
-              }`}
-              style={{
-                transitionDelay: `${i * 10}ms`,
-              }}
-            >
-              {char}
-            </span>
-          )
-        ))}
+        {/* Group chars by word so line-breaks only happen at word boundaries */}
+        {(() => {
+          const words = text.split(" ")
+          let cursor = 0
+          return words.map((word, wi) => {
+            const wordStart = cursor
+            cursor += word.length + 1 // +1 for the space
+            return (
+              <span key={wi} className="inline-block whitespace-nowrap">
+                {word.split("").map((_, ci) => {
+                  const i = wordStart + ci
+                  const displayChar = displayText[i] ?? ""
+                  return (
+                    <span
+                      key={ci}
+                      className={`inline-block transition-all duration-150 ${
+                        isScrambling && displayChar !== text[i] ? "text-primary scale-110" : "text-foreground"
+                      }`}
+                      style={{ transitionDelay: `${i * 10}ms` }}
+                    >
+                      {displayChar}
+                    </span>
+                  )
+                })}
+                {wi < words.length - 1 && (
+                  <span className="inline-block w-[0.35em]" />
+                )}
+              </span>
+            )
+          })
+        })()}
       </span>
 
       {/* Animated underline */}
