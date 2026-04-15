@@ -5,19 +5,33 @@ interface NavProps {
 
 export function Nav({ onBack, showBack }: NavProps) {
   return (
-    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-border shadow-lg">
-      <span className="font-heading font-semibold text-sm text-foreground">DocAI</span>
-      {showBack && onBack && (
-        <>
-          <span className="text-border">|</span>
+    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-black/70 backdrop-blur-md border-b border-white/10">
+      <span className="font-heading font-bold text-base text-white">DocAI</span>
+      <div className="flex items-center gap-6">
+        {showBack && onBack ? (
           <button
             onClick={onBack}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-white/60 hover:text-white transition-colors"
           >
             ← Back
           </button>
-        </>
-      )}
+        ) : (
+          <a href="#" className="text-sm text-white/60 hover:text-white transition-colors">
+            Upload
+          </a>
+        )}
+        <a href="#results" className="text-sm text-white/60 hover:text-white transition-colors">
+          Results
+        </a>
+        <a
+          href="https://github.com/arsalan-na1/ai-doc-pipeline"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-white/60 hover:text-white transition-colors"
+        >
+          GitHub
+        </a>
+      </div>
     </nav>
   )
 }
