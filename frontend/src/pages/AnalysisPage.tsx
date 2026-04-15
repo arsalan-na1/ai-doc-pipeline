@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import confetti from "canvas-confetti"
 import { Nav } from "../components/Nav"
 import { RatingInteraction } from "../components/ui/emoji-rating"
 import { getDocument, jobMatch, DocDetail, JobMatchResult } from "../lib/api"
@@ -26,6 +27,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   const [doc, setDoc] = useState<DocDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const hasShot = useRef(false)
 
   // Job match drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -49,6 +51,19 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
     load()
     return () => { cancelled = true }
   }, [docId])
+
+  // Fire confetti once when analysis data first loads
+  useEffect(() => {
+    if (doc && !hasShot.current) {
+      hasShot.current = true
+      confetti({
+        particleCount: 160,
+        spread: 70,
+        origin: { y: 0.55 },
+        colors: ["#fb923c", "#facc15", "#34d399", "#60a5fa", "#f472b6"],
+      })
+    }
+  }, [doc])
 
   async function handleJobMatch() {
     if (!jdText.trim()) return

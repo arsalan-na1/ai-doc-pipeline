@@ -13,6 +13,8 @@ interface HeroProps {
   /** Optional React node rendered instead of the default headline h1 elements */
   headlineNode?: React.ReactNode;
   subtitle: string;
+  /** Optional React node rendered instead of the default subtitle paragraph */
+  subtitleNode?: React.ReactNode;
   buttons?: {
     primary?: {
       text: string;
@@ -23,6 +25,8 @@ interface HeroProps {
       onClick?: () => void;
     };
   };
+  /** Optional React node rendered instead of the default buttons row */
+  primaryButtonNode?: React.ReactNode;
   className?: string;
 }
 
@@ -322,7 +326,9 @@ const Hero: React.FC<HeroProps> = ({
   headline,
   headlineNode,
   subtitle,
+  subtitleNode,
   buttons,
+  primaryButtonNode,
   className = ""
 }) => {
   const canvasRef = useShaderBackground();
@@ -372,32 +378,33 @@ const Hero: React.FC<HeroProps> = ({
           
           {/* Subtitle with Animation */}
           <div className="max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
-            <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed">
-              {subtitle}
-            </p>
+            {subtitleNode ?? (
+              <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed">
+                {subtitle}
+              </p>
+            )}
           </div>
-          
+
           {/* CTA Buttons with Animation */}
-          {buttons && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-fade-in-up animation-delay-800">
-              {buttons.primary && (
-                <button 
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-fade-in-up animation-delay-800">
+            {primaryButtonNode ?? (buttons?.primary && (
+                <button
                   onClick={buttons.primary.onClick}
                   className="px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-black rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25"
                 >
                   {buttons.primary.text}
                 </button>
-              )}
-              {buttons.secondary && (
-                <button 
-                  onClick={buttons.secondary.onClick}
-                  className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/30 hover:border-orange-300/50 text-orange-100 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                >
-                  {buttons.secondary.text}
-                </button>
-              )}
-            </div>
-          )}
+              )
+            )}
+            {buttons?.secondary && (
+              <button
+                onClick={buttons.secondary.onClick}
+                className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/30 hover:border-orange-300/50 text-orange-100 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+              >
+                {buttons.secondary.text}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

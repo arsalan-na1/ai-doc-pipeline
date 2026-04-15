@@ -1,0 +1,58 @@
+<h2>How does Job Match work on the analysis page?</h2>
+<p class="subtitle">The user is already on the full-page analysis view. They want to check their resume against a job description.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d14;padding:12px;border-radius:8px;min-height:180px">
+      <div style="background:#1a1a2e;border-radius:6px;padding:8px;font-size:10px;color:#94a3b8">
+        <div style="color:#e2e8f0;font-weight:bold;margin-bottom:6px;font-size:11px">Job Match</div>
+        <textarea style="width:100%;background:#0d0d14;border:1px solid #2a2a3e;border-radius:4px;color:#94a3b8;font-size:9px;padding:4px;resize:none;box-sizing:border-box" rows="4" placeholder="Paste job description here...&#10;&#10;We're looking for a Senior Engineer..."></textarea>
+        <button style="margin-top:6px;background:#6366f1;color:white;border:none;border-radius:4px;padding:4px 10px;font-size:9px;cursor:pointer;width:100%">Analyze Match →</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Section on the page</h3>
+      <p>Job Match is a permanent section near the bottom of the analysis page. Textarea always visible, results appear below it after clicking Analyze.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d14;padding:12px;border-radius:8px;min-height:180px">
+      <div style="background:#1a1a2e;border-radius:6px;padding:8px;font-size:10px;color:#94a3b8">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="color:#e2e8f0;font-weight:bold;font-size:11px">Resume Score: 82</span>
+          <button style="background:#6366f133;color:#a5b4fc;border:1px solid #6366f1;border-radius:4px;padding:3px 8px;font-size:9px;cursor:pointer">+ Match to Job</button>
+        </div>
+        <div style="background:#6366f111;border:1px dashed #6366f144;border-radius:4px;padding:8px;font-size:9px;color:#6366f1;text-align:center">
+          Click "Match to Job" to open the job description panel →
+        </div>
+        <div style="margin-top:6px;font-size:9px;color:#475569">The panel slides in from the right side</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Floating panel / drawer</h3>
+      <p>A "Match to Job" button sits in the header. Clicking it slides in a panel from the right where the user pastes the JD and sees results side-by-side with their resume.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d14;padding:12px;border-radius:8px;min-height:180px">
+      <div style="background:#1a1a2e;border-radius:6px;padding:8px;font-size:10px;color:#94a3b8">
+        <div style="color:#e2e8f0;font-weight:bold;margin-bottom:6px;font-size:11px">Analysis Page</div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;font-size:9px;border-bottom:1px solid #2a2a3e;padding-bottom:4px">
+          <span style="color:#6366f1;border-bottom:2px solid #6366f1;padding-bottom:2px">Summary</span>
+          <span>Improvements</span>
+          <span style="color:#22d3ee">Job Match ✦</span>
+        </div>
+        <div style="font-size:9px;color:#64748b;margin-bottom:4px">Paste a job description to see your match score:</div>
+        <div style="background:#0d0d14;border:1px solid #2a2a3e;border-radius:3px;padding:4px;font-size:9px;color:#475569;height:36px">We're looking for a Senior Engineer with 5+ years...</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Tab on the analysis page</h3>
+      <p>The analysis page has tabs: Summary / Improvements / Job Match. The Job Match tab has the textarea. Keeps things organized without modal-on-modal complexity.</p>
+    </div>
+  </div>
+
+</div>

@@ -1,6 +1,10 @@
 import { useState, useRef, useCallback } from "react"
 import Hero from "../components/ui/animated-shader-hero"
 import { TextScramble } from "../components/ui/text-scramble"
+import { FlipWords } from "../components/ui/flip-words"
+import { SparklesCore } from "../components/ui/sparkles"
+import { GlowingEffect } from "../components/ui/glowing-effect"
+import { TextShimmer } from "../components/ui/text-shimmer"
 import { Nav } from "../components/Nav"
 import { getSession } from "../lib/session"
 import { getUploadUrl, uploadToS3, listDocuments, pollDocument, DocSummary } from "../lib/api"
@@ -10,6 +14,41 @@ interface HomePageProps {
 }
 
 type UploadState = "idle" | "uploading" | "processing" | "done" | "error"
+
+const FEATURES = [
+  {
+    icon: "🎯",
+    title: "Resume Score",
+    desc: "ATS-weighted score across 5 categories with specific notes.",
+  },
+  {
+    icon: "🤖",
+    title: "ATS Check",
+    desc: "Surface the exact issues automated screeners flag.",
+  },
+  {
+    icon: "📈",
+    title: "Career Level",
+    desc: "Entry, mid, or senior assessment with tailored advice.",
+  },
+  {
+    icon: "💡",
+    title: "Improvements",
+    desc: "5–8 prioritised, actionable recommendations.",
+  },
+  {
+    icon: "✏️",
+    title: "Rewrites",
+    desc: "Side-by-side original vs. suggested rewrites for weak sections.",
+  },
+  {
+    icon: "🔗",
+    title: "Job Match",
+    desc: "Paste a JD and get match score, gaps, and tailoring tips.",
+  },
+]
+
+const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -33,7 +72,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
     }
   }, [loadingDocs])
 
-  // Load docs once on mount
   if (!didLoadDocs.current) {
     didLoadDocs.current = true
     loadDocs()
@@ -50,23 +88,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
       setUploadState("error")
       return
     }
-
     try {
       setUploadState("uploading")
       setUploadMsg("Uploading…")
       const session = getSession()
       const { upload_url, document_key, file_id: _ } = await getUploadUrl(session)
       await uploadToS3(upload_url, file)
-
-      // derive document_id = sha256(bucket/key)[:16] — we just poll by listing
-      // Instead, get doc ID from the key
       const docId = await deriveDocId(document_key)
-
       setUploadState("processing")
       setUploadMsg("Analyzing your resume…")
-
       const doc = await pollDocument(docId)
-
       if (doc.status === "COMPLETED") {
         setUploadState("done")
         setUploadMsg("Analysis complete!")
@@ -82,8 +113,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
   }
 
   async function deriveDocId(documentKey: string): Promise<string> {
-    // document_id = sha256("{bucket}/{key}")[:16] in hex
-    // We need the bucket name
     const bucket = import.meta.env.VITE_S3_BUCKET ?? "ai-doc-pipeline-205839628674"
     const text = `${bucket}/${documentKey}`
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
@@ -102,40 +131,49 @@ export function HomePage({ onNavigate }: HomePageProps) {
     if (file) handleFile(file)
   }
 
-  const uploadArea = (
-    <div className="w-full max-w-2xl mx-auto mt-10 px-4">
-      <div
-        onDrop={handleDrop}
-        onDragOver={e => e.preventDefault()}
+  // ── Sparkled CTA button ──────────────────────────────────────────────────
+  const sparkleButton = (
+    <div className="relative inline-flex items-center justify-center">
+      <SparklesCore
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        background="transparent"
+        particleColor="#fb923c"
+        particleDensity={50}
+        minSize={0.6}
+        maxSize={1.4}
+        speed={1.5}
+      />
+      <button
         onClick={() => fileRef.current?.click()}
-        className="relative border-2 border-dashed border-orange-300/40 hover:border-orange-300/70 rounded-2xl p-10 text-center cursor-pointer transition-colors bg-black/20 backdrop-blur-sm"
+        className="relative z-10 px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-black rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25"
       >
-        <input ref={fileRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleInputChange} />
-        {uploadState === "idle" && (
-          <>
-            <p className="text-orange-100/80 text-lg font-medium">Drop your resume here</p>
-            <p className="text-orange-100/50 text-sm mt-1">PDF up to 10 MB</p>
-          </>
-        )}
-        {uploadState === "uploading" && (
-          <p className="text-orange-300 animate-pulse">{uploadMsg}</p>
-        )}
-        {uploadState === "processing" && (
-          <p className="text-yellow-300 animate-pulse">{uploadMsg}</p>
-        )}
-        {uploadState === "done" && (
-          <p className="text-emerald-300">{uploadMsg}</p>
-        )}
-        {uploadState === "error" && (
-          <p className="text-red-400">{uploadMsg}</p>
-        )}
-      </div>
+        Analyze Resume
+      </button>
     </div>
   )
+
+  // ── Upload zone status ───────────────────────────────────────────────────
+  const uploadZoneContent = (() => {
+    if (uploadState === "idle")
+      return (
+        <>
+          <p className="text-orange-100/80 text-lg font-medium">Drop your resume here</p>
+          <p className="text-orange-100/50 text-sm mt-1">PDF up to 10 MB</p>
+        </>
+      )
+    if (uploadState === "uploading")
+      return <TextShimmer className="text-orange-300 text-base" duration={1.5}>{uploadMsg}</TextShimmer>
+    if (uploadState === "processing")
+      return <TextShimmer className="text-yellow-300 text-base" duration={1.2}>{uploadMsg}</TextShimmer>
+    if (uploadState === "done")
+      return <p className="text-emerald-300">{uploadMsg}</p>
+    return <p className="text-red-400">{uploadMsg}</p>
+  })()
 
   return (
     <div className="dark min-h-screen bg-black text-white">
       <Nav />
+
       <Hero
         headline={{ line1: "AI Document", line2: "Intelligence" }}
         headlineNode={
@@ -144,20 +182,59 @@ export function HomePage({ onNavigate }: HomePageProps) {
             spanClassName="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent"
           />
         }
-        subtitle="Upload your resume and get instant ATS scoring, improvement suggestions, and job match analysis."
-        buttons={{
-          primary: {
-            text: "Analyze Resume",
-            onClick: () => fileRef.current?.click(),
-          },
-        }}
+        subtitle="Analyze your resume"
+        subtitleNode={
+          <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed flex items-center justify-center gap-2 flex-wrap">
+            Analyze your resume
+            <FlipWords
+              words={FLIP_WORDS}
+              duration={2000}
+              className="text-orange-300 font-semibold"
+            />
+          </p>
+        }
         trustBadge={{ text: "Powered by AI • Instant results" }}
+        primaryButtonNode={sparkleButton}
       />
 
-      {/* Upload drop zone rendered inside hero via absolute positioning workaround:
-          We render it below the hero so the hero stays full-screen */}
+      {/* Below-hero content */}
       <div className="relative z-10 -mt-24 pb-20 px-4">
-        {uploadArea}
+
+        {/* Upload drop zone */}
+        <div className="w-full max-w-2xl mx-auto mt-10">
+          <div
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileRef.current?.click()}
+            className="relative border-2 border-dashed border-orange-300/40 hover:border-orange-300/70 rounded-2xl p-10 text-center cursor-pointer transition-colors bg-black/20 backdrop-blur-sm"
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={handleInputChange}
+            />
+            {uploadZoneContent}
+          </div>
+        </div>
+
+        {/* Feature grid */}
+        <div className="max-w-3xl mx-auto mt-16">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-6">
+            What you get
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FEATURES.map(f => (
+              <div key={f.title} className="relative rounded-2xl border border-white/10 bg-white/5 p-5">
+                <GlowingEffect disabled={false} spread={30} blur={0} proximity={60} inactiveZone={0.05} borderWidth={1} />
+                <div className="text-2xl mb-3">{f.icon}</div>
+                <p className="font-semibold text-sm text-white mb-1">{f.title}</p>
+                <p className="text-xs text-white/50 leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Recent documents */}
         {docs !== null && docs.length > 0 && (
