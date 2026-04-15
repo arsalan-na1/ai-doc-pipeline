@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
-import { TextScramble } from "../components/ui/text-scramble"
+import { TextScramble, TextScrambleHandle } from "../components/ui/text-scramble"
 import { FlipWords } from "../components/ui/flip-words"
 import { SparklesCore } from "../components/ui/sparkles"
-import { GlowingEffect } from "../components/ui/glowing-effect"
+import { ShineBorder } from "../components/ui/shine-border"
 import { TextShimmer } from "../components/ui/text-shimmer"
 import { Nav } from "../components/Nav"
 import { getSession } from "../lib/session"
@@ -52,6 +52,7 @@ const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
 ]
 
 const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
+const SHINE_COLORS: [string, string, string] = ["#a855f7", "#6366f1", "#06b6d4"]
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -60,6 +61,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [loadingDocs, setLoadingDocs] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const didLoadDocs = useRef(false)
+  const scrambleRef = useRef<TextScrambleHandle>(null)
+
+  // Auto-trigger scramble on mount
+  useEffect(() => {
+    const t = setTimeout(() => scrambleRef.current?.trigger(), 300)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Re-trigger on hash navigation back to home
+  useEffect(() => {
+    const onHashChange = () => {
+      if (window.location.hash === "" || window.location.hash === "#") {
+        setTimeout(() => scrambleRef.current?.trigger(), 300)
+      }
+    }
+    window.addEventListener("hashchange", onHashChange)
+    return () => window.removeEventListener("hashchange", onHashChange)
+  }, [])
 
   const loadDocs = useCallback(async () => {
     if (loadingDocs) return
@@ -181,6 +200,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         headline={{ line1: "AI Document", line2: "Intelligence Pipeline" }}
         headlineNode={
           <TextScramble
+            ref={scrambleRef}
             text="AI DOCUMENT INTELLIGENCE PIPELINE"
             spanClassName="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent"
           />
@@ -245,12 +265,17 @@ export function HomePage({ onNavigate }: HomePageProps) {
             {FEATURES.map(f => {
               const Icon = f.icon
               return (
-                <div key={f.title} className="relative rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <GlowingEffect disabled={false} spread={60} blur={20} proximity={60} inactiveZone={0.05} borderWidth={3} />
+                <ShineBorder
+                  key={f.title}
+                  color={SHINE_COLORS}
+                  borderWidth={2}
+                  borderRadius={16}
+                  className="w-full bg-white/5 p-5 dark:bg-white/5"
+                >
                   <Icon className="w-6 h-6 mb-3 text-orange-400" />
                   <p className="font-semibold text-sm text-white mb-1">{f.title}</p>
                   <p className="text-xs text-white/50 leading-relaxed">{f.desc}</p>
-                </div>
+                </ShineBorder>
               )
             })}
           </div>

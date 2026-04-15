@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from "react"
 
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*"
 
@@ -9,116 +9,124 @@ interface TextScrambleProps {
   spanClassName?: string
 }
 
-export function TextScramble({ text, className = "", spanClassName = "" }: TextScrambleProps) {
-  const [displayText, setDisplayText] = useState(text)
-  const [isHovering, setIsHovering] = useState(false)
-  const [isScrambling, setIsScrambling] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const frameRef = useRef(0)
+export interface TextScrambleHandle {
+  trigger: () => void
+}
 
-  const scramble = useCallback(() => {
-    setIsScrambling(true)
-    frameRef.current = 0
-    const duration = text.length * 3
+export const TextScramble = forwardRef<TextScrambleHandle, TextScrambleProps>(
+  function TextScramble({ text, className = "", spanClassName = "" }, ref) {
+    const [displayText, setDisplayText] = useState(text)
+    const [isHovering, setIsHovering] = useState(false)
+    const [isScrambling, setIsScrambling] = useState(false)
+    const intervalRef = useRef<NodeJS.Timeout | null>(null)
+    const frameRef = useRef(0)
 
-    if (intervalRef.current) clearInterval(intervalRef.current)
+    const scramble = useCallback(() => {
+      setIsScrambling(true)
+      frameRef.current = 0
+      const duration = text.length * 3
 
-    intervalRef.current = setInterval(() => {
-      frameRef.current++
-
-      const progress = frameRef.current / duration
-      const revealedLength = Math.floor(progress * text.length)
-
-      const newText = text
-        .split("")
-        .map((char, i) => {
-          if (char === " ") return " "
-          if (i < revealedLength) return text[i]
-          return CHARS[Math.floor(Math.random() * CHARS.length)]
-        })
-        .join("")
-
-      setDisplayText(newText)
-
-      if (frameRef.current >= duration) {
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        setDisplayText(text)
-        setIsScrambling(false)
-      }
-    }, 30)
-  }, [text])
-
-  const handleMouseEnter = () => {
-    setIsHovering(true)
-    scramble()
-  }
-
-  const handleMouseLeave = () => {
-    setIsHovering(false)
-  }
-
-  useEffect(() => {
-    return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [])
 
-  return (
-    <div
-      className={`group relative inline-flex flex-col cursor-pointer select-none ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <span className={`relative font-mono text-lg tracking-widest uppercase ${spanClassName}`}>
-        {/* Group chars by word so line-breaks only happen at word boundaries */}
-        {(() => {
-          const words = text.split(" ")
-          let cursor = 0
-          return words.map((word, wi) => {
-            const wordStart = cursor
-            cursor += word.length + 1 // +1 for the space
-            return (
-              <span key={wi} className="inline-block whitespace-nowrap">
-                {word.split("").map((_, ci) => {
-                  const i = wordStart + ci
-                  const displayChar = displayText[i] ?? ""
-                  return (
-                    <span
-                      key={ci}
-                      className={`inline-block transition-all duration-150 ${
-                        isScrambling && displayChar !== text[i] ? "text-primary scale-110" : "text-foreground"
-                      }`}
-                      style={{ transitionDelay: `${i * 10}ms` }}
-                    >
-                      {displayChar}
-                    </span>
-                  )
-                })}
-                {wi < words.length - 1 && (
-                  <span className="inline-block w-[0.35em]" />
-                )}
-              </span>
-            )
+      intervalRef.current = setInterval(() => {
+        frameRef.current++
+
+        const progress = frameRef.current / duration
+        const revealedLength = Math.floor(progress * text.length)
+
+        const newText = text
+          .split("")
+          .map((char, i) => {
+            if (char === " ") return " "
+            if (i < revealedLength) return text[i]
+            return CHARS[Math.floor(Math.random() * CHARS.length)]
           })
-        })()}
-      </span>
+          .join("")
 
-      {/* Animated underline */}
-      <span className="relative h-px w-full mt-2 overflow-hidden">
+        setDisplayText(newText)
+
+        if (frameRef.current >= duration) {
+          if (intervalRef.current) clearInterval(intervalRef.current)
+          setDisplayText(text)
+          setIsScrambling(false)
+        }
+      }, 30)
+    }, [text])
+
+    useImperativeHandle(ref, () => ({ trigger: scramble }), [scramble])
+
+    const handleMouseEnter = () => {
+      setIsHovering(true)
+      scramble()
+    }
+
+    const handleMouseLeave = () => {
+      setIsHovering(false)
+    }
+
+    useEffect(() => {
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+      }
+    }, [])
+
+    return (
+      <div
+        className={`group relative inline-flex flex-col cursor-pointer select-none ${className}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <span className={`relative font-mono text-lg tracking-widest uppercase ${spanClassName}`}>
+          {/* Group chars by word so line-breaks only happen at word boundaries */}
+          {(() => {
+            const words = text.split(" ")
+            let cursor = 0
+            return words.map((word, wi) => {
+              const wordStart = cursor
+              cursor += word.length + 1 // +1 for the space
+              return (
+                <span key={wi} className="inline-block whitespace-nowrap">
+                  {word.split("").map((_, ci) => {
+                    const i = wordStart + ci
+                    const displayChar = displayText[i] ?? ""
+                    return (
+                      <span
+                        key={ci}
+                        className={`inline-block transition-all duration-150 ${
+                          isScrambling && displayChar !== text[i] ? "text-primary scale-110" : "text-foreground"
+                        }`}
+                        style={{ transitionDelay: `${i * 10}ms` }}
+                      >
+                        {displayChar}
+                      </span>
+                    )
+                  })}
+                  {wi < words.length - 1 && (
+                    <span className="inline-block w-[0.35em]" />
+                  )}
+                </span>
+              )
+            })
+          })()}
+        </span>
+
+        {/* Animated underline */}
+        <span className="relative h-px w-full mt-2 overflow-hidden">
+          <span
+            className={`absolute inset-0 bg-foreground transition-transform duration-500 ease-out origin-left ${
+              isHovering ? "scale-x-100" : "scale-x-0"
+            }`}
+          />
+          <span className="absolute inset-0 bg-border" />
+        </span>
+
+        {/* Subtle glow on hover */}
         <span
-          className={`absolute inset-0 bg-foreground transition-transform duration-500 ease-out origin-left ${
-            isHovering ? "scale-x-100" : "scale-x-0"
+          className={`absolute -inset-4 rounded-lg bg-primary/5 transition-opacity duration-300 -z-10 ${
+            isHovering ? "opacity-100" : "opacity-0"
           }`}
         />
-        <span className="absolute inset-0 bg-border" />
-      </span>
-
-      {/* Subtle glow on hover */}
-      <span
-        className={`absolute -inset-4 rounded-lg bg-primary/5 transition-opacity duration-300 -z-10 ${
-          isHovering ? "opacity-100" : "opacity-0"
-        }`}
-      />
-    </div>
-  )
-}
+      </div>
+    )
+  }
+)
