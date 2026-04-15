@@ -19,40 +19,17 @@ type UploadState = "idle" | "uploading" | "processing" | "done" | "error"
 type FeatureIcon = typeof Trophy
 
 const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
-  {
-    icon: Trophy,
-    title: "Resume Score",
-    desc: "ATS-weighted score across 5 categories with specific notes.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "ATS Check",
-    desc: "Surface the exact issues automated screeners flag.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Career Level",
-    desc: "Entry, mid, or senior assessment with tailored advice.",
-  },
-  {
-    icon: Lightbulb,
-    title: "Improvements",
-    desc: "5–8 prioritised, actionable recommendations.",
-  },
-  {
-    icon: PenLine,
-    title: "Rewrites",
-    desc: "Side-by-side original vs. suggested rewrites for weak sections.",
-  },
-  {
-    icon: Target,
-    title: "Job Match",
-    desc: "Paste a JD and get match score, gaps, and tailoring tips.",
-  },
+  { icon: Trophy,      title: "Resume Score",  desc: "ATS-weighted score across 5 categories with specific notes." },
+  { icon: ShieldCheck, title: "ATS Check",     desc: "Surface the exact issues automated screeners flag." },
+  { icon: TrendingUp,  title: "Career Level",  desc: "Entry, mid, or senior assessment with tailored advice." },
+  { icon: Lightbulb,   title: "Improvements",  desc: "5–8 prioritised, actionable recommendations." },
+  { icon: PenLine,     title: "Rewrites",      desc: "Side-by-side original vs. suggested rewrites for weak sections." },
+  { icon: Target,      title: "Job Match",     desc: "Paste a JD and get match score, gaps, and tailoring tips." },
 ]
 
 const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
 const SHINE_COLORS: [string, string, string] = ["#a855f7", "#6366f1", "#06b6d4"]
+const DROPZONE_COLORS: [string, string, string] = ["#f97316", "#eab308", "#fb923c"]
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -63,13 +40,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const didLoadDocs = useRef(false)
   const scrambleRef = useRef<TextScrambleHandle>(null)
 
-  // Auto-trigger scramble on mount
   useEffect(() => {
     const t = setTimeout(() => scrambleRef.current?.trigger(), 300)
     return () => clearTimeout(t)
   }, [])
 
-  // Re-trigger on hash navigation back to home
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === "" || window.location.hash === "#") {
@@ -153,7 +128,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
     if (file) handleFile(file)
   }
 
-  // ── Sparkled CTA button ──────────────────────────────────────────────────
+  const uploadZoneContent = (() => {
+    if (uploadState === "idle")
+      return (
+        <>
+          <p className="text-orange-100/80 text-lg font-medium">Drop your resume here</p>
+          <p className="text-orange-100/50 text-sm mt-1">PDF up to 10 MB</p>
+        </>
+      )
+    if (uploadState === "uploading")
+      return <TextShimmer className="text-orange-300 text-base" duration={1.5}>{uploadMsg}</TextShimmer>
+    if (uploadState === "processing")
+      return <TextShimmer className="text-yellow-300 text-base" duration={1.2}>{uploadMsg}</TextShimmer>
+    if (uploadState === "done")
+      return <p className="text-emerald-300">{uploadMsg}</p>
+    return <p className="text-red-400">{uploadMsg}</p>
+  })()
+
   const sparkleButton = (
     <div className="relative inline-flex items-center justify-center">
       <SparklesCore
@@ -174,24 +165,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
     </div>
   )
 
-  // ── Upload zone status ───────────────────────────────────────────────────
-  const uploadZoneContent = (() => {
-    if (uploadState === "idle")
-      return (
-        <>
-          <p className="text-orange-100/80 text-lg font-medium">Drop your resume here</p>
-          <p className="text-orange-100/50 text-sm mt-1">PDF up to 10 MB</p>
-        </>
-      )
-    if (uploadState === "uploading")
-      return <TextShimmer className="text-orange-300 text-base" duration={1.5}>{uploadMsg}</TextShimmer>
-    if (uploadState === "processing")
-      return <TextShimmer className="text-yellow-300 text-base" duration={1.2}>{uploadMsg}</TextShimmer>
-    if (uploadState === "done")
-      return <p className="text-emerald-300">{uploadMsg}</p>
-    return <p className="text-red-400">{uploadMsg}</p>
-  })()
-
   return (
     <div className="dark min-h-screen bg-black text-white">
       <Nav />
@@ -209,40 +182,28 @@ export function HomePage({ onNavigate }: HomePageProps) {
         subtitleNode={
           <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed flex items-center justify-center gap-2 flex-wrap">
             Analyze your resume
-            <FlipWords
-              words={FLIP_WORDS}
-              duration={2000}
-              className="text-orange-300 font-semibold"
-            />
+            <FlipWords words={FLIP_WORDS} duration={2000} className="text-orange-300 font-semibold" />
           </p>
         }
         trustBadge={{ text: "Powered by AI • Instant results" }}
         primaryButtonNode={sparkleButton}
       />
 
-      {/* Below-hero content */}
       <div className="relative z-10 -mt-24 pb-20 px-4">
 
-        {/* Upload drop zone */}
+        {/* Upload drop zone — ShineBorder */}
         <div className="w-full max-w-2xl mx-auto mt-10">
-          <style>{`
-            @keyframes border-spin {
-              0%   { background-position: 0% 50%; }
-              50%  { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-            .animated-gradient-border {
-              background: linear-gradient(90deg, #f97316, #eab308, #fb923c, #facc15, #f97316);
-              background-size: 300% 300%;
-              animation: border-spin 3s ease infinite;
-            }
-          `}</style>
-          <div className="animated-gradient-border p-[2px] rounded-2xl">
+          <ShineBorder
+            color={DROPZONE_COLORS}
+            borderWidth={2}
+            borderRadius={16}
+            className="w-full p-0 bg-black/20 dark:bg-black/20"
+          >
             <div
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              className="relative rounded-2xl p-10 text-center cursor-pointer bg-black backdrop-blur-sm"
+              className="w-full rounded-2xl p-10 text-center cursor-pointer"
             >
               <input
                 ref={fileRef}
@@ -253,10 +214,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
               />
               {uploadZoneContent}
             </div>
-          </div>
+          </ShineBorder>
         </div>
 
-        {/* Feature grid */}
+        {/* Feature grid — ShineBorder on each card */}
         <div className="max-w-3xl mx-auto mt-16">
           <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-6">
             What you get
@@ -270,7 +231,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   color={SHINE_COLORS}
                   borderWidth={2}
                   borderRadius={16}
-                  className="w-full bg-white/5 p-5 dark:bg-white/5"
+                  className="w-full p-5 bg-white/5 dark:bg-white/5"
                 >
                   <Icon className="w-6 h-6 mb-3 text-orange-400" />
                   <p className="font-semibold text-sm text-white mb-1">{f.title}</p>
@@ -281,37 +242,42 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </div>
         </div>
 
-        {/* Recent documents */}
+        {/* Recent analyses — ShineBorder on each card */}
         {docs !== null && docs.length > 0 && (
           <div className="max-w-2xl mx-auto mt-12" id="results">
             <h2 className="text-lg font-semibold text-orange-100/80 mb-4">Recent Analyses</h2>
             <ul className="space-y-3">
               {docs.map(doc => (
-                <li
+                <ShineBorder
                   key={doc.document_id}
+                  color={SHINE_COLORS}
+                  borderWidth={1}
+                  borderRadius={12}
+                  className="w-full p-4 bg-zinc-900 dark:bg-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
                   onClick={() => onNavigate(doc.document_id)}
-                  className="flex items-center justify-between p-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 cursor-pointer transition-colors"
                 >
-                  <div>
-                    <p className="font-medium text-sm text-white">
-                      {doc.candidate_name || doc.filename || "Resume"}
-                    </p>
-                    <p className="text-xs text-white/40 mt-0.5">
-                      {doc.upload_timestamp ? new Date(doc.upload_timestamp).toLocaleDateString() : ""}
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm text-white">
+                        {doc.candidate_name || doc.filename || "Resume"}
+                      </p>
+                      <p className="text-xs text-white/40 mt-0.5">
+                        {doc.upload_timestamp ? new Date(doc.upload_timestamp).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                        doc.status === "COMPLETED"
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : doc.status === "FAILED"
+                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                          : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                      }`}
+                    >
+                      {doc.status === "COMPLETED" ? "Done" : doc.status === "FAILED" ? "Failed" : "Processing…"}
+                    </span>
                   </div>
-                  <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                      doc.status === "COMPLETED"
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                        : doc.status === "FAILED"
-                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                        : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                    }`}
-                  >
-                    {doc.status === "COMPLETED" ? "Done" : doc.status === "FAILED" ? "Failed" : "Processing…"}
-                  </span>
-                </li>
+                </ShineBorder>
               ))}
             </ul>
           </div>
