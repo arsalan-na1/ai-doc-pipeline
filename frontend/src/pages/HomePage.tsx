@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
+import { ShaderAnimation } from "../components/ui/shader-animation"
 import { TextScramble, TextScrambleHandle } from "../components/ui/text-scramble"
 import { FlipWords } from "../components/ui/flip-words"
 import { SparklesCore } from "../components/ui/sparkles"
@@ -166,9 +167,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
   )
 
   return (
-    <div className="dark min-h-screen bg-black text-white">
+    <div className="dark min-h-screen text-white">
+      {/* Fixed full-page shader background */}
+      <div className="fixed inset-0 z-0" style={{ opacity: 0.65 }}>
+        <ShaderAnimation />
+      </div>
+
       <Nav />
 
+      <div className="relative z-10">
       <Hero
         headline={{ line1: "AI Document", line2: "Intelligence Pipeline" }}
         headlineNode={
@@ -188,6 +195,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         trustBadge={{ text: "Powered by AI • Instant results" }}
         primaryButtonNode={sparkleButton}
       />
+      </div>
 
       <div className="relative z-10 -mt-24 pb-20 px-4">
 

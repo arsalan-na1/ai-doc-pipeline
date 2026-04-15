@@ -1,5 +1,4 @@
 import React from 'react';
-import { ShaderAnimation } from './shader-animation';
 
 interface HeroProps {
   trustBadge?: {
@@ -38,11 +37,7 @@ const Hero: React.FC<HeroProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`relative w-full h-screen overflow-hidden bg-black ${className}`}>
-      <div className="absolute inset-0 overflow-hidden">
-        <ShaderAnimation />
-      </div>
-
+    <div className={`relative w-full h-screen overflow-hidden ${className}`}>
       {/* Hero Content Overlay */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white">
         {/* Trust Badge */}
