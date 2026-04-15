@@ -96,8 +96,12 @@ export async function getDocument(documentId: string): Promise<DocDetail> {
 export async function pollDocument(documentId: string, maxMs = 120_000, intervalMs = 3_000): Promise<DocDetail> {
   const deadline = Date.now() + maxMs
   while (Date.now() < deadline) {
-    const doc = await getDocument(documentId)
-    if (doc.status === "COMPLETED" || doc.status === "FAILED") return doc
+    try {
+      const doc = await getDocument(documentId)
+      if (doc.status === "COMPLETED" || doc.status === "FAILED") return doc
+    } catch {
+      // 404 = Lambda hasn't written PROCESSING record yet; keep polling
+    }
     await new Promise(r => setTimeout(r, intervalMs))
   }
   throw new Error("Polling timed out")
