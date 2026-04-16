@@ -4,7 +4,7 @@ import { XCircle, Sparkles } from "lucide-react"
 import { Nav } from "../components/Nav"
 import { RatingInteraction } from "../components/ui/emoji-rating"
 import { ShineBorder } from "../components/ui/shine-border"
-import { ShaderAnimation } from "../components/ui/shader-animation"
+import { AnalysisShaderBg } from "../components/ui/shaders-hero-section"
 import { getDocument, jobMatch, DocDetail, JobMatchResult } from "../lib/api"
 
 interface AnalysisPageProps {
@@ -113,8 +113,8 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   }
 
   const shaderBg = (
-    <div className="fixed inset-0 z-0" style={{ opacity: 0.55 }}>
-      <ShaderAnimation />
+    <div className="fixed inset-0 z-0" style={{ opacity: 0.5 }}>
+      <AnalysisShaderBg />
     </div>
   )
 
