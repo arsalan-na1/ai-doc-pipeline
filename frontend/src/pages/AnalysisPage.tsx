@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import confetti from "canvas-confetti"
-import { XCircle, Sparkles, Copy, Check, Download, Share2 } from "lucide-react"
+import { XCircle, Sparkles, Copy, Check, Download, Share2, X } from "lucide-react"
 import { Nav } from "../components/Nav"
 import { RatingInteraction } from "../components/ui/emoji-rating"
 import { ShineBorder } from "../components/ui/shine-border"
@@ -290,7 +290,8 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
           </div>
           <button
             onClick={handleShare}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            aria-label={shareCopied ? "Link copied" : "Copy share link"}
           >
             {shareCopied
               ? <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -303,7 +304,11 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
         {/* Score ring + Breakdown side-by-side on desktop */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="flex flex-col items-center gap-3 md:w-48 mx-auto md:mx-0">
-            <div className="relative inline-flex items-center justify-center drop-shadow-[0_0_28px_rgba(168,85,247,0.45)]">
+            <div
+              className="relative inline-flex items-center justify-center drop-shadow-[0_0_28px_rgba(168,85,247,0.45)]"
+              role="img"
+              aria-label={`ATS Score: ${displayScore} out of 100`}
+            >
               <svg width="160" height="160" viewBox="0 0 160 160" className="-rotate-90">
                 <defs>
                   <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -334,7 +339,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               <div className="space-y-3">
                 {Object.entries(breakdown).map(([key, cat]) => {
                   if (!cat) return null
-                  const pct = Math.round((cat.score / cat.max) * 100)
+                  const pct = cat.max > 0 ? Math.round((cat.score / cat.max) * 100) : 0
                   return (
                     <div key={key} className="space-y-1.5">
                       <div className="flex justify-between text-sm">
@@ -392,19 +397,19 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               {sortedImprovements.map(imp => (
                 <li
                   key={imp.id}
-                  className={`p-4 rounded-xl border text-sm group ${PRIORITY_CARD[imp.priority] ?? "border-white/10 bg-white/5"}`}
+                  className={`p-4 rounded-xl border text-sm group ${PRIORITY_CARD[imp.priority?.toLowerCase()] ?? "border-white/10 bg-white/5"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2 flex-1">
-                      <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${PRIORITY_BADGE[imp.priority] ?? "bg-white/10 text-white/60"}`}>
+                      <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${PRIORITY_BADGE[imp.priority?.toLowerCase()] ?? "bg-white/10 text-white/60"}`}>
                         {imp.priority}
                       </span>
                       <p className="text-white/80 leading-relaxed">{imp.text}</p>
                     </div>
                     <button
                       onClick={() => copyImprovement(imp.text, imp.id)}
-                      className="shrink-0 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
-                      title="Copy to clipboard"
+                      className="shrink-0 p-1.5 rounded-lg opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-white/5 hover:bg-white/10 text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 focus-visible:opacity-100"
+                      aria-label="Copy improvement to clipboard"
                     >
                       {copiedId === imp.id
                         ? <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -430,7 +435,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               </div>
               <button
                 onClick={handleDownloadPDF}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 <Download className="w-3.5 h-3.5" />
                 Download PDF
@@ -444,7 +449,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
                   <button
                     key={i}
                     onClick={() => setActiveTab(i)}
-                    className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
                       activeTab === i
                         ? "bg-gradient-to-r from-purple-600/80 to-cyan-500/80 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
                         : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
@@ -501,8 +506,11 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               <h2 className="font-semibold text-base text-white">Job Match Analysis</h2>
               <button
                 onClick={() => { setDrawerOpen(false); setMatchResult(null); setMatchError("") }}
-                className="text-white/40 hover:text-white transition-colors"
-              >✕</button>
+                className="text-white/40 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             {!matchResult ? (

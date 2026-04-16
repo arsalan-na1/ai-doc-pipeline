@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2 } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
 import { Warp } from "@paper-design/shaders-react"
@@ -49,9 +49,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
   const [uploadMsg, setUploadMsg] = useState("")
   const [docs, setDocs] = useState<DocSummary[] | null>(null)
-  const [loadingDocs, setLoadingDocs] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const didLoadDocs = useRef(false)
   const scrambleRef = useRef<TextScrambleHandle>(null)
 
   useEffect(() => {
@@ -69,24 +67,20 @@ export function HomePage({ onNavigate }: HomePageProps) {
     return () => window.removeEventListener("hashchange", onHashChange)
   }, [])
 
-  const loadDocs = useCallback(async () => {
-    if (loadingDocs) return
-    setLoadingDocs(true)
-    try {
-      const session = getSession()
-      const list = await listDocuments(session)
-      setDocs(list)
-    } catch {
-      setDocs([])
-    } finally {
-      setLoadingDocs(false)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const session = getSession()
+        const list = await listDocuments(session)
+        if (!cancelled) setDocs(list)
+      } catch {
+        if (!cancelled) setDocs([])
+      }
     }
-  }, [loadingDocs])
-
-  if (!didLoadDocs.current) {
-    didLoadDocs.current = true
-    loadDocs()
-  }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   async function handleFile(file: File) {
     if (!file || file.type !== "application/pdf") {

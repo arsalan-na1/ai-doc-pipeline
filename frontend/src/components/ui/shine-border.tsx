@@ -24,9 +24,13 @@ export function ShineBorder({
   return (
     <div
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } } : undefined}
       style={{ "--border-radius": `${borderRadius}px` } as React.CSSProperties}
       className={cn(
         "relative overflow-hidden rounded-[--border-radius] bg-black p-3 dark:bg-black",
+        onClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
         className,
       )}
     >
