@@ -138,9 +138,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </>
       )
     if (uploadState === "uploading")
-      return <TextShimmer className="text-orange-300 text-base" duration={1.5}>{uploadMsg}</TextShimmer>
+      return (
+        <TextShimmer
+          className="text-base [--base-color:#f97316] [--base-gradient-color:#fef08a]"
+          duration={1.5}
+        >
+          {uploadMsg}
+        </TextShimmer>
+      )
     if (uploadState === "processing")
-      return <TextShimmer className="text-yellow-300 text-base" duration={1.2}>{uploadMsg}</TextShimmer>
+      return (
+        <TextShimmer
+          className="text-base [--base-color:#d97706] [--base-gradient-color:#ffffff]"
+          duration={1.0}
+        >
+          {uploadMsg}
+        </TextShimmer>
+      )
     if (uploadState === "done")
       return <p className="text-emerald-300">{uploadMsg}</p>
     return <p className="text-red-400">{uploadMsg}</p>
