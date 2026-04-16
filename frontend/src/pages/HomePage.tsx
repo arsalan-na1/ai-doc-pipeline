@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react"
-import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target } from "lucide-react"
+import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2 } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
 import { ShaderAnimation } from "../components/ui/shader-animation"
 import { TextScramble, TextScrambleHandle } from "../components/ui/text-scramble"
@@ -31,6 +31,19 @@ const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
 const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
 const SHINE_COLORS: [string, string, string] = ["#a855f7", "#6366f1", "#06b6d4"]
 const DROPZONE_COLORS: [string, string, string] = ["#f97316", "#eab308", "#fb923c"]
+
+type StepIcon = typeof Upload
+const HOW_IT_WORKS: { step: number; icon: StepIcon; title: string; desc: string }[] = [
+  { step: 1, icon: Upload,    title: "Upload PDF",      desc: "Drop your resume — PDF up to 10 MB." },
+  { step: 2, icon: Cpu,       title: "Lambda Parses",   desc: "AWS Lambda extracts and structures text." },
+  { step: 3, icon: Brain,     title: "AI Analyzes",     desc: "Nvidia Nemotron LLM scores your resume." },
+  { step: 4, icon: BarChart2, title: "Get Results",     desc: "ATS score, improvements, and rewrites." },
+]
+
+const TECH_STACK = [
+  "AWS Lambda", "DynamoDB", "API Gateway", "S3", "CloudFront",
+  "Python", "React", "Vite", "Nvidia Nemotron",
+]
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -261,6 +274,49 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </ShineBorder>
               )
             })}
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div className="max-w-5xl mx-auto mt-16">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-8">
+            How It Works
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {HOW_IT_WORKS.map((s, i) => {
+              const Icon = s.icon
+              return (
+                <div key={s.step} className="relative p-5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-black font-bold text-xs shrink-0">
+                      {s.step}
+                    </div>
+                    {i < HOW_IT_WORKS.length - 1 && (
+                      <span className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 text-white/20 text-xl z-10 pointer-events-none">›</span>
+                    )}
+                  </div>
+                  <Icon className="w-5 h-5 text-orange-400" />
+                  <div>
+                    <p className="font-semibold text-sm text-white mb-1">{s.title}</p>
+                    <p className="text-xs text-white/50 leading-relaxed">{s.desc}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Tech stack badges */}
+        <div className="max-w-5xl mx-auto mt-8">
+          <div className="flex flex-wrap justify-center gap-2">
+            {TECH_STACK.map(tech => (
+              <span
+                key={tech}
+                className="text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20 transition-colors"
+              >
+                {tech}
+              </span>
+            ))}
           </div>
         </div>
 

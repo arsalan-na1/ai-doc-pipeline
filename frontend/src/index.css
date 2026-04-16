@@ -58,7 +58,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Outfit', sans-serif;
   }
+}
+
+@media print {
+  body > *:not(#print-rewrites) { display: none !important; }
+  #print-rewrites { display: block !important; }
 }
 
 /* Animations extracted from AnimatedShaderHero */

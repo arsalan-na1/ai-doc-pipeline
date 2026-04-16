@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import confetti from "canvas-confetti"
-import { XCircle, Sparkles } from "lucide-react"
+import { XCircle, Sparkles, Copy, Check, Download, Share2 } from "lucide-react"
 import { Nav } from "../components/Nav"
 import { RatingInteraction } from "../components/ui/emoji-rating"
 import { ShineBorder } from "../components/ui/shine-border"
@@ -30,10 +30,10 @@ const PRIORITY_BADGE: Record<string, string> = {
   medium: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40",
   low:    "bg-blue-500/20 text-blue-300 border border-blue-500/40",
 }
+const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
 const SHINE = ["#a855f7", "#6366f1", "#06b6d4"] as [string, string, string]
 
-// Section heading with gradient rule
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
@@ -43,6 +43,81 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-lg ${className}`}
+      style={{ background: "rgba(255,255,255,0.07)" }}
+    />
+  )
+}
+
+function AnalysisSkeleton() {
+  return (
+    <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 space-y-8">
+      <div className="text-center space-y-3">
+        <SkeletonBlock className="h-9 w-64 mx-auto" />
+        <SkeletonBlock className="h-3 w-32 mx-auto" />
+        <SkeletonBlock className="h-6 w-20 mx-auto rounded-full" />
+      </div>
+      <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="flex flex-col items-center gap-3 md:w-48 mx-auto md:mx-0">
+          <SkeletonBlock className="w-40 h-40 rounded-full" />
+          <SkeletonBlock className="h-3 w-16" />
+        </div>
+        <div className="flex-1 w-full space-y-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="space-y-1.5">
+              <div className="flex justify-between">
+                <SkeletonBlock className="h-4 w-24" />
+                <SkeletonBlock className="h-4 w-8" />
+              </div>
+              <SkeletonBlock className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+      {[1, 2, 3].map(i => <SkeletonBlock key={i} className="h-20 w-full" />)}
+    </div>
+  )
+}
+
+function buildPrintHTML(rewrites: { section: string; original: string; suggested: string }[], docName: string): string {
+  const rows = rewrites.map(rw => {
+    const sec = rw.section.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const orig = rw.original.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const sugg = rw.suggested.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    return `<div class="rw">
+  <div class="sec">${sec}</div>
+  <div class="cols">
+    <div class="col orig"><div class="lbl">Original</div><p>${orig}</p></div>
+    <div class="col sugg"><div class="lbl">Suggested</div><p>${sugg}</p></div>
+  </div>
+</div>`
+  }).join("")
+
+  const safeName = docName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+  return `<!DOCTYPE html>
+<html><head><title>Rewrites</title>
+<style>
+  body{font-family:Arial,sans-serif;padding:32px;color:#111;max-width:900px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:6px}
+  .meta{font-size:12px;color:#666;margin-bottom:28px}
+  .rw{margin-bottom:32px;page-break-inside:avoid;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  .sec{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:8px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb}
+  .cols{display:grid;grid-template-columns:1fr 1fr}
+  .col{padding:16px}.col+.col{border-left:1px solid #e5e7eb}
+  .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .orig .lbl{color:#dc2626}.sugg .lbl{color:#16a34a}
+  p{margin:0;line-height:1.7;font-size:13px;color:#374151}
+</style></head><body>
+<h1>Resume Rewrites</h1>
+<div class="meta">${safeName}</div>
+${rows}
+</body></html>`
+}
+
 export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   const [doc, setDoc] = useState<DocDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,7 +125,10 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   const hasShot = useRef(false)
   const [displayScore, setDisplayScore] = useState(0)
 
-  // Job match drawer state
+  const [activeTab, setActiveTab] = useState(0)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [jdText, setJdText] = useState("")
   const [matchLoading, setMatchLoading] = useState(false)
@@ -73,7 +151,6 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
     return () => { cancelled = true }
   }, [docId])
 
-  // Confetti + score count-up when data loads
   useEffect(() => {
     if (!doc) return
     if (!hasShot.current) {
@@ -86,7 +163,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
       })
     }
     const target = doc.analysis?.score?.total ?? 0
-    const duration = 1200
+    const duration = 1500
     const start = performance.now()
     const tick = (now: number) => {
       const progress = Math.min((now - start) / duration, 1)
@@ -96,6 +173,36 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
     }
     requestAnimationFrame(tick)
   }, [doc])
+
+  function copyImprovement(text: string, id: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  function handleShare() {
+    navigator.clipboard.writeText(window.location.href)
+    setShareCopied(true)
+    setTimeout(() => setShareCopied(false), 2000)
+  }
+
+  function handleDownloadPDF() {
+    const docRewrites = doc?.analysis?.rewrites ?? []
+    if (!docRewrites.length) return
+    const docName = doc?.parsed_data?.name || doc?.candidate_name || doc?.filename || "Resume"
+    const html = buildPrintHTML(docRewrites, docName)
+    const blob = new Blob([html], { type: "text/html" })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, "_blank")
+    if (win) {
+      setTimeout(() => {
+        try { win.print() } catch { /* user may have blocked popups */ }
+        setTimeout(() => URL.revokeObjectURL(url), 10000)
+      }, 600)
+    } else {
+      URL.revokeObjectURL(url)
+    }
+  }
 
   async function handleJobMatch() {
     if (!jdText.trim()) return
@@ -120,10 +227,10 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen flex items-center justify-center">
+      <div className="dark min-h-screen text-white">
         {shaderBg}
         <Nav onBack={onBack} showBack />
-        <p className="relative z-10 text-white/60 animate-pulse text-sm tracking-wide">Loading analysis…</p>
+        <AnalysisSkeleton />
       </div>
     )
   }
@@ -139,96 +246,117 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   }
 
   const a = doc.analysis
-  const score = a?.score?.total ?? 0
   const breakdown = a?.score?.breakdown ?? {}
   const atsIssues = a?.ats?.issues ?? []
   const improvements = a?.improvements ?? []
   const rewrites = a?.rewrites ?? []
   const name = doc.parsed_data?.name || doc.candidate_name || doc.filename || "Resume"
 
+  const sortedImprovements = [...improvements].sort(
+    (x, y) =>
+      (PRIORITY_ORDER[x.priority?.toUpperCase()] ?? 3) -
+      (PRIORITY_ORDER[y.priority?.toUpperCase()] ?? 3)
+  )
+
   const R = 60
   const circ = 2 * Math.PI * R
-  const dash = (score / 100) * circ
+  const displayDash = (displayScore / 100) * circ
+
+  const careerLevel = a?.career_level
+    ? a.career_level.charAt(0).toUpperCase() + a.career_level.slice(1)
+    : null
 
   return (
     <div className="dark min-h-screen text-white pb-32">
       {shaderBg}
       <Nav onBack={onBack} showBack />
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 pt-24 space-y-10">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 space-y-8">
 
-        {/* ── Header ── */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">
-            {name}
-          </h1>
-          {doc.filename && (
-            <p className="text-xs text-white/40 tracking-wide">{doc.filename}</p>
-          )}
-          {a?.career_level && (
-            <span className="inline-block mt-2 text-xs px-3 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_14px_rgba(168,85,247,0.35)]">
-              {a.career_level}
-            </span>
-          )}
-        </div>
-
-        {/* ── Score ring ── */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative inline-flex items-center justify-center drop-shadow-[0_0_28px_rgba(168,85,247,0.45)]">
-            <svg width="160" height="160" viewBox="0 0 160 160" className="-rotate-90">
-              <defs>
-                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#a855f7" />
-                  <stop offset="100%" stopColor="#06b6d4" />
-                </linearGradient>
-              </defs>
-              <circle cx="80" cy="80" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="12" />
-              <circle
-                cx="80" cy="80" r={R} fill="none"
-                stroke="url(#scoreGrad)"
-                strokeWidth="12"
-                strokeDasharray={`${dash} ${circ}`}
-                strokeLinecap="round"
-                style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)" }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-bold tabular-nums">{displayScore}</span>
-              <span className="text-xs text-white/40 tracking-wide">/ 100</span>
-            </div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 text-center space-y-2">
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">
+              {name}
+            </h1>
+            {doc.filename && (
+              <p className="text-xs text-white/40 tracking-wide">{doc.filename}</p>
+            )}
+            {careerLevel && (
+              <span className="inline-block mt-2 text-xs px-3 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_14px_rgba(168,85,247,0.35)]">
+                {careerLevel}
+              </span>
+            )}
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-white/40">ATS Score</p>
+          <button
+            onClick={handleShare}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            {shareCopied
+              ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+              : <Share2 className="w-3.5 h-3.5" />
+            }
+            {shareCopied ? "Copied!" : "Share"}
+          </button>
         </div>
 
-        {/* ── Category breakdown ── */}
-        {Object.keys(breakdown).length > 0 && (
-          <section>
-            <SectionHeading>Breakdown</SectionHeading>
-            <div className="space-y-3">
-              {Object.entries(breakdown).map(([key, cat]) => {
-                if (!cat) return null
-                const pct = Math.round((cat.score / cat.max) * 100)
-                return (
-                  <div key={key} className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-white/70">{CATEGORY_LABELS[key] ?? key}</span>
-                      <span className="text-white/40 tabular-nums">{cat.score}/{cat.max}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-white/8 overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-700"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    {cat.note && <p className="text-xs text-white/35">{cat.note}</p>}
-                  </div>
-                )
-              })}
+        {/* Score ring + Breakdown side-by-side on desktop */}
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex flex-col items-center gap-3 md:w-48 mx-auto md:mx-0">
+            <div className="relative inline-flex items-center justify-center drop-shadow-[0_0_28px_rgba(168,85,247,0.45)]">
+              <svg width="160" height="160" viewBox="0 0 160 160" className="-rotate-90">
+                <defs>
+                  <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#a855f7" />
+                    <stop offset="100%" stopColor="#06b6d4" />
+                  </linearGradient>
+                </defs>
+                <circle cx="80" cy="80" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="12" />
+                <circle
+                  cx="80" cy="80" r={R} fill="none"
+                  stroke="url(#scoreGrad)"
+                  strokeWidth="12"
+                  strokeDasharray={`${displayDash} ${circ}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-bold tabular-nums">{displayScore}</span>
+                <span className="text-xs text-white/40 tracking-wide">/ 100</span>
+              </div>
             </div>
-          </section>
-        )}
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-white/40">ATS Score</p>
+          </div>
 
-        {/* ── Career Advice ── */}
+          {Object.keys(breakdown).length > 0 && (
+            <div className="flex-1 w-full">
+              <SectionHeading>Breakdown</SectionHeading>
+              <div className="space-y-3">
+                {Object.entries(breakdown).map(([key, cat]) => {
+                  if (!cat) return null
+                  const pct = Math.round((cat.score / cat.max) * 100)
+                  return (
+                    <div key={key} className="space-y-1.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/70">{CATEGORY_LABELS[key] ?? key}</span>
+                        <span className="text-white/40 tabular-nums">{cat.score}/{cat.max}</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 transition-all duration-700"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {cat.note && <p className="text-xs text-white/35">{cat.note}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Career Advice */}
         {a?.career_level_advice && (
           <section>
             <SectionHeading>Career Advice</SectionHeading>
@@ -241,7 +369,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
           </section>
         )}
 
-        {/* ── ATS Issues ── */}
+        {/* ATS Issues */}
         {atsIssues.length > 0 && (
           <section>
             <SectionHeading>ATS Issues ({atsIssues.length})</SectionHeading>
@@ -256,60 +384,104 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
           </section>
         )}
 
-        {/* ── Improvements ── */}
-        {improvements.length > 0 && (
+        {/* Improvements — sorted HIGH→MEDIUM→LOW, with copy button */}
+        {sortedImprovements.length > 0 && (
           <section>
-            <SectionHeading>Improvements ({improvements.length})</SectionHeading>
+            <SectionHeading>Improvements ({sortedImprovements.length})</SectionHeading>
             <ul className="space-y-3">
-              {improvements.map(imp => (
+              {sortedImprovements.map(imp => (
                 <li
                   key={imp.id}
-                  className={`p-4 rounded-xl border text-sm ${PRIORITY_CARD[imp.priority] ?? "border-white/10 bg-white/5"}`}
+                  className={`p-4 rounded-xl border text-sm group ${PRIORITY_CARD[imp.priority] ?? "border-white/10 bg-white/5"}`}
                 >
-                  <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full mb-2 ${PRIORITY_BADGE[imp.priority] ?? "bg-white/10 text-white/60"}`}>
-                    {imp.priority}
-                  </span>
-                  <p className="text-white/80 leading-relaxed">{imp.text}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-2 flex-1">
+                      <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${PRIORITY_BADGE[imp.priority] ?? "bg-white/10 text-white/60"}`}>
+                        {imp.priority}
+                      </span>
+                      <p className="text-white/80 leading-relaxed">{imp.text}</p>
+                    </div>
+                    <button
+                      onClick={() => copyImprovement(imp.text, imp.id)}
+                      className="shrink-0 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
+                      title="Copy to clipboard"
+                    >
+                      {copiedId === imp.id
+                        ? <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        : <Copy className="w-3.5 h-3.5" />
+                      }
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           </section>
         )}
 
-        {/* ── Rewrites ── */}
+        {/* Rewrites — tabbed */}
         {rewrites.length > 0 && (
           <section>
-            <SectionHeading>Rewrites ({rewrites.length})</SectionHeading>
-            <div className="space-y-4">
-              {rewrites.map((rw, i) => (
-                <div key={i} className="rounded-xl border border-white/10 overflow-hidden text-sm">
-                  <div className="px-4 py-2.5 bg-white/5 border-b border-white/10 font-medium text-white/70 text-xs uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-white/50 shrink-0">
+                  Rewrites ({rewrites.length})
+                </h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-purple-500/40 to-transparent" />
+              </div>
+              <button
+                onClick={handleDownloadPDF}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+              </button>
+            </div>
+
+            {/* Tab bar — horizontally scrollable on mobile */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex gap-1 min-w-max">
+                {rewrites.map((rw, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTab(i)}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                      activeTab === i
+                        ? "bg-gradient-to-r from-purple-600/80 to-cyan-500/80 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                        : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
+                    }`}
+                  >
                     {rw.section}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Active rewrite panel */}
+            {rewrites[activeTab] && (
+              <div className="mt-3 rounded-xl border border-white/10 overflow-hidden text-sm">
+                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                  <div className="p-4 space-y-1.5 bg-red-950/25">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Original</p>
+                    <p className="leading-relaxed text-white/55">{rewrites[activeTab].original}</p>
                   </div>
-                  <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                    <div className="p-4 space-y-1.5 bg-red-950/25">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Original</p>
-                      <p className="leading-relaxed text-white/55">{rw.original}</p>
-                    </div>
-                    <div className="p-4 space-y-1.5 bg-emerald-950/25">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Suggested</p>
-                      <p className="leading-relaxed text-white/85">{rw.suggested}</p>
-                    </div>
+                  <div className="p-4 space-y-1.5 bg-emerald-950/25">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Suggested</p>
+                    <p className="leading-relaxed text-white/85">{rewrites[activeTab].suggested}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </section>
         )}
 
-        {/* ── Rating ── */}
+        {/* Rating */}
         <section className="pt-4 flex flex-col items-center gap-2">
           <p className="text-xs text-white/35 uppercase tracking-widest">How useful was this analysis?</p>
           <RatingInteraction />
         </section>
       </div>
 
-      {/* ── Floating Job Match button ── */}
+      {/* Floating Job Match button */}
       <button
         onClick={() => setDrawerOpen(true)}
         className="fixed bottom-6 right-6 z-40 px-5 py-3 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/25 hover:opacity-90 transition-opacity"
@@ -317,14 +489,14 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
         Job Match
       </button>
 
-      {/* ── Job Match drawer ── */}
+      {/* Job Match drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDrawerOpen(false); setMatchResult(null); setMatchError("") }}
           />
-          <div className="relative w-full max-w-lg mx-4 mb-0 sm:mb-0 rounded-t-2xl sm:rounded-2xl bg-zinc-900 border border-white/10 p-6 space-y-4 shadow-2xl">
+          <div className="relative w-full max-w-lg mx-4 rounded-t-2xl sm:rounded-2xl bg-zinc-900 border border-white/10 p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-base text-white">Job Match Analysis</h2>
               <button
