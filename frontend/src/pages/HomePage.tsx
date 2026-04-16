@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2 } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
-import { ShaderAnimation } from "../components/ui/shader-animation"
+import { Warp } from "@paper-design/shaders-react"
 import { TextScramble, TextScrambleHandle } from "../components/ui/text-scramble"
 import { FlipWords } from "../components/ui/flip-words"
 import { SparklesCore } from "../components/ui/sparkles"
@@ -196,8 +196,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="dark min-h-screen text-white">
       {/* Fixed full-page shader background */}
-      <div className="fixed inset-0 z-0" style={{ opacity: 0.65 }}>
-        <ShaderAnimation />
+      <div className="fixed inset-0 z-0" style={{ opacity: 0.7 }}>
+        <Warp
+          style={{ width: "100%", height: "100%" }}
+          proportion={0.45}
+          softness={1}
+          distortion={0.25}
+          swirl={0.8}
+          swirlIterations={10}
+          shape="checks"
+          shapeScale={0.1}
+          scale={1}
+          rotation={0}
+          speed={1}
+          colors={["#1a0533", "#f97316", "#7c3aed", "#fbbf24"]}
+        />
       </div>
 
       <Nav />
