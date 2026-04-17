@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Fragment, type ReactNode } from "react"
 import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2 } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
 import { Warp } from "@paper-design/shaders-react"
@@ -16,7 +16,6 @@ interface HomePageProps {
 }
 
 type UploadState = "idle" | "uploading" | "processing" | "done" | "error"
-
 type FeatureIcon = typeof Trophy
 
 const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
@@ -32,18 +31,59 @@ const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
 const SHINE_COLORS: [string, string, string] = ["#a855f7", "#6366f1", "#06b6d4"]
 const DROPZONE_COLORS: [string, string, string] = ["#f97316", "#eab308", "#fb923c"]
 
+const STATS = ["6 Analysis Outputs", "Free AI Inference", "Serverless AWS", "<2 min Processing"]
+
 type StepIcon = typeof Upload
 const HOW_IT_WORKS: { step: number; icon: StepIcon; title: string; desc: string }[] = [
-  { step: 1, icon: Upload,    title: "Upload PDF",      desc: "Drop your resume — PDF up to 10 MB." },
-  { step: 2, icon: Cpu,       title: "Lambda Parses",   desc: "AWS Lambda extracts and structures text." },
-  { step: 3, icon: Brain,     title: "AI Analyzes",     desc: "Nvidia Nemotron LLM scores your resume." },
-  { step: 4, icon: BarChart2, title: "Get Results",     desc: "ATS score, improvements, and rewrites." },
+  { step: 1, icon: Upload,    title: "Upload PDF",    desc: "Drop your resume — PDF up to 10 MB." },
+  { step: 2, icon: Cpu,       title: "Lambda Parses", desc: "AWS Lambda extracts and structures text." },
+  { step: 3, icon: Brain,     title: "AI Analyzes",   desc: "Nvidia Nemotron LLM scores your resume." },
+  { step: 4, icon: BarChart2, title: "Get Results",   desc: "ATS score, improvements, and rewrites." },
 ]
 
 const TECH_STACK = [
   "AWS Lambda", "DynamoDB", "API Gateway", "S3", "CloudFront",
-  "Python", "React", "Vite", "Nvidia Nemotron",
+  "Python", "React", "Nvidia Nemotron", "OpenRouter",
 ]
+
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold: 0.08 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return { ref, visible }
+}
+
+function RevealSection({
+  children,
+  className,
+  id,
+}: {
+  children: ReactNode
+  className?: string
+  id?: string
+}) {
+  const { ref, visible } = useScrollReveal()
+  return (
+    <div
+      id={id}
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      } ${className ?? ""}`}
+    >
+      {children}
+    </div>
+  )
+}
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -210,30 +250,30 @@ export function HomePage({ onNavigate }: HomePageProps) {
       <Nav />
 
       <div className="relative z-10">
-      <Hero
-        headline={{ line1: "AI Document", line2: "Intelligence Pipeline" }}
-        headlineNode={
-          <TextScramble
-            ref={scrambleRef}
-            text="AI DOCUMENT INTELLIGENCE PIPELINE"
-            spanClassName="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent"
-          />
-        }
-        subtitle="Analyze your resume"
-        subtitleNode={
-          <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed flex items-center justify-center gap-2 flex-wrap">
-            Analyze your resume
-            <FlipWords words={FLIP_WORDS} duration={2000} className="text-orange-300 font-semibold" />
-          </p>
-        }
-        trustBadge={{ text: "Powered by AI • Instant results" }}
-        primaryButtonNode={sparkleButton}
-      />
+        <Hero
+          headline={{ line1: "AI Document", line2: "Intelligence Pipeline" }}
+          headlineNode={
+            <TextScramble
+              ref={scrambleRef}
+              text="AI DOCUMENT INTELLIGENCE PIPELINE"
+              spanClassName="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent"
+            />
+          }
+          subtitle="Analyze your resume"
+          subtitleNode={
+            <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed flex items-center justify-center gap-2 flex-wrap">
+              Analyze your resume
+              <FlipWords words={FLIP_WORDS} duration={2000} className="text-orange-300 font-semibold" />
+            </p>
+          }
+          trustBadge={{ text: "Powered by AI • Instant results" }}
+          primaryButtonNode={sparkleButton}
+        />
       </div>
 
       <div className="relative z-10 -mt-24 pb-20 px-4">
 
-        {/* Upload drop zone — ShineBorder */}
+        {/* Upload drop zone */}
         <div className="w-full max-w-2xl mx-auto mt-10">
           <ShineBorder
             color={DROPZONE_COLORS}
@@ -259,8 +299,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </ShineBorder>
         </div>
 
-        {/* Feature grid — ShineBorder on each card */}
-        <div className="max-w-3xl mx-auto mt-16">
+        {/* Stats bar */}
+        <RevealSection className="w-full max-w-2xl mx-auto mt-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-5 py-3 rounded-full border border-white/10 bg-black/30 backdrop-blur-sm">
+            {STATS.map((stat, i) => (
+              <Fragment key={stat}>
+                <span className="text-xs text-white/55 font-medium tracking-wide">{stat}</span>
+                {i < STATS.length - 1 && (
+                  <span className="text-white/20 text-xs select-none" aria-hidden="true">·</span>
+                )}
+              </Fragment>
+            ))}
+          </div>
+        </RevealSection>
+
+        {/* Feature grid */}
+        <RevealSection className="max-w-3xl mx-auto mt-16">
           <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-6">
             What you get
           </h2>
@@ -282,25 +336,48 @@ export function HomePage({ onNavigate }: HomePageProps) {
               )
             })}
           </div>
-        </div>
+        </RevealSection>
 
-        {/* How it works */}
-        <div className="max-w-5xl mx-auto mt-16">
+        {/* How It Works */}
+        <RevealSection className="max-w-5xl mx-auto mt-16">
           <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-8">
             How It Works
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Desktop: flex row with dashed connectors */}
+          <div className="hidden lg:flex items-stretch">
             {HOW_IT_WORKS.map((s, i) => {
               const Icon = s.icon
               return (
-                <div key={s.step} className="relative p-5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
+                <Fragment key={s.step}>
+                  <div className="flex-1 p-5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-black font-bold text-xs shrink-0">
                       {s.step}
                     </div>
-                    {i < HOW_IT_WORKS.length - 1 && (
-                      <span className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 text-white/20 text-xl z-10 pointer-events-none">›</span>
-                    )}
+                    <Icon className="w-5 h-5 text-orange-400" />
+                    <div>
+                      <p className="font-semibold text-sm text-white mb-1">{s.title}</p>
+                      <p className="text-xs text-white/50 leading-relaxed">{s.desc}</p>
+                    </div>
+                  </div>
+                  {i < HOW_IT_WORKS.length - 1 && (
+                    <div className="flex items-center px-3" aria-hidden="true">
+                      <div className="w-8 border-t-2 border-dashed border-orange-500/30" />
+                    </div>
+                  )}
+                </Fragment>
+              )
+            })}
+          </div>
+
+          {/* Mobile: 2-col grid */}
+          <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {HOW_IT_WORKS.map(s => {
+              const Icon = s.icon
+              return (
+                <div key={s.step} className="p-5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-black font-bold text-xs shrink-0">
+                    {s.step}
                   </div>
                   <Icon className="w-5 h-5 text-orange-400" />
                   <div>
@@ -311,25 +388,25 @@ export function HomePage({ onNavigate }: HomePageProps) {
               )
             })}
           </div>
-        </div>
+        </RevealSection>
 
         {/* Tech stack badges */}
-        <div className="max-w-5xl mx-auto mt-8">
+        <RevealSection className="max-w-5xl mx-auto mt-8">
           <div className="flex flex-wrap justify-center gap-2">
             {TECH_STACK.map(tech => (
               <span
                 key={tech}
-                className="text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20 transition-colors"
+                className="font-mono text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20 transition-colors"
               >
                 {tech}
               </span>
             ))}
           </div>
-        </div>
+        </RevealSection>
 
-        {/* Recent analyses — ShineBorder on each card */}
+        {/* Recent analyses */}
         {docs !== null && docs.length > 0 && (
-          <div className="max-w-2xl mx-auto mt-12" id="results">
+          <RevealSection id="results" className="max-w-2xl mx-auto mt-12">
             <h2 className="text-lg font-semibold text-orange-100/80 mb-4">Recent Analyses</h2>
             <ul className="space-y-3">
               {docs.map(doc => (
@@ -365,9 +442,29 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </ShineBorder>
               ))}
             </ul>
-          </div>
+          </RevealSection>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 mt-8 border-t border-white/10 bg-black/40 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
+          <span className="font-mono tracking-wider">DocAI © 2026</span>
+          <div className="flex items-center gap-6">
+            <a
+              href="https://github.com/arsalan-na1/ai-doc-pipeline"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white/70 transition-colors"
+            >
+              GitHub
+            </a>
+            <a href="#" className="hover:text-white/70 transition-colors">Upload</a>
+            <a href="#results" className="hover:text-white/70 transition-colors">Results</a>
+          </div>
+          <span className="text-center sm:text-right">Built on AWS Free Tier · Powered by Nvidia Nemotron</span>
+        </div>
+      </footer>
     </div>
   )
 }
