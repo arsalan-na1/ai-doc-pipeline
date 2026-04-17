@@ -118,6 +118,13 @@
 .animation-delay-600 { animation-delay: 0.6s; }
 .animation-delay-800 { animation-delay: 0.8s; }
 
+/* Feature card hover glow */
+@keyframes card-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(139, 92, 246, 0.30), 0 0 48px rgba(99, 102, 241, 0.10); }
+  50%       { box-shadow: 0 0 40px rgba(139, 92, 246, 0.52), 0 0 80px rgba(99, 102, 241, 0.22); }
+}
+.card-glow { animation: card-glow 2s ease-in-out infinite; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

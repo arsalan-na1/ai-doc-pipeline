@@ -78,6 +78,42 @@ function RevealSection({
   )
 }
 
+function TiltCard({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [hovered, setHovered] = useState(false)
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = ref.current
+    if (!el) return
+    const { left, top, width, height } = el.getBoundingClientRect()
+    const x = (e.clientX - left - width / 2) / (width / 2)
+    const y = (e.clientY - top - height / 2) / (height / 2)
+    el.style.transition = "transform 0.1s ease, box-shadow 0.4s ease"
+    el.style.transform = `perspective(800px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`
+  }
+
+  function onLeave() {
+    const el = ref.current
+    if (!el) return
+    el.style.transition = "transform 0.35s ease, box-shadow 0.4s ease"
+    el.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg)"
+    setHovered(false)
+  }
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={onLeave}
+      className={`rounded-2xl ${hovered ? "card-glow" : ""}`}
+      style={{ transformStyle: "preserve-3d" }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
   const [uploadMsg, setUploadMsg] = useState("")
@@ -217,9 +253,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
     <div className="dark min-h-screen text-white">
       <Nav />
 
-      {/* Hero — shader scoped here only */}
+      {/* Hero — shader scoped here, fades to dark at bottom */}
       <div className="relative h-screen overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.35 }}>
+        {/* Shader background */}
+        <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.45 }}>
           <Warp
             style={{ width: "100%", height: "100%" }}
             proportion={0.45}
@@ -232,9 +269,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
             scale={1}
             rotation={0}
             speed={1}
-            colors={["#1a0533", "#f97316", "#7c3aed", "#fbbf24"]}
+            colors={["#060614", "#150a4a", "#3b1aa0", "#0d35c8"]}
           />
         </div>
+
+        {/* Bottom gradient — makes cutoff intentional */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none"
+          style={{ height: "200px", background: "linear-gradient(to bottom, transparent 0%, #020817 100%)" }}
+        />
+
         <Hero
           headline={{ line1: "Land More", line2: "Interviews" }}
           headlineNode={
@@ -303,25 +347,26 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </RevealSection>
 
         {/* Feature grid */}
-        <RevealSection className="max-w-3xl mx-auto mt-16">
-          <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-6">
+        <RevealSection className="max-w-5xl mx-auto mt-16">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-orange-300/60 mb-8">
             What you get
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map(f => {
               const Icon = f.icon
               return (
-                <ShineBorder
-                  key={f.title}
-                  color={SHINE_COLORS}
-                  borderWidth={2}
-                  borderRadius={16}
-                  className="w-full p-5 bg-white/5 dark:bg-white/5"
-                >
-                  <Icon className="w-6 h-6 mb-3 text-orange-400" />
-                  <p className="font-semibold text-sm text-white mb-1">{f.title}</p>
-                  <p className="text-xs text-white/50 leading-relaxed">{f.desc}</p>
-                </ShineBorder>
+                <TiltCard key={f.title}>
+                  <ShineBorder
+                    color={SHINE_COLORS}
+                    borderWidth={2}
+                    borderRadius={16}
+                    className="w-full min-h-[200px] flex flex-col p-8 bg-white/5 dark:bg-white/5"
+                  >
+                    <Icon className="w-8 h-8 mb-4 text-violet-400" />
+                    <p className="font-bold text-xl text-white mb-2">{f.title}</p>
+                    <p className="text-base text-white/55 leading-relaxed flex-1">{f.desc}</p>
+                  </ShineBorder>
+                </TiltCard>
               )
             })}
           </div>
