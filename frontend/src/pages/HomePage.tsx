@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, Fragment, type ReactNode } from "react"
-import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2 } from "lucide-react"
+import { Trophy, ShieldCheck, TrendingUp, Lightbulb, PenLine, Target, Upload, Cpu, Brain, BarChart2, UploadCloud } from "lucide-react"
 import Hero from "../components/ui/animated-shader-hero"
 import { Warp } from "@paper-design/shaders-react"
 import { TextScramble, TextScrambleHandle } from "../components/ui/text-scramble"
-import { FlipWords } from "../components/ui/flip-words"
 import { SparklesCore } from "../components/ui/sparkles"
 import { ShineBorder } from "../components/ui/shine-border"
 import { TextShimmer } from "../components/ui/text-shimmer"
@@ -27,11 +26,10 @@ const FEATURES: { icon: FeatureIcon; title: string; desc: string }[] = [
   { icon: Target,      title: "Job Match",     desc: "Paste a JD and get match score, gaps, and tailoring tips." },
 ]
 
-const FLIP_WORDS = ["Smarter", "Faster", "Better", "Instantly"]
 const SHINE_COLORS: [string, string, string] = ["#a855f7", "#6366f1", "#06b6d4"]
 const DROPZONE_COLORS: [string, string, string] = ["#f97316", "#eab308", "#fb923c"]
 
-const STATS = ["6 Analysis Outputs", "Free AI Inference", "Serverless AWS", "<2 min Processing"]
+const STATS = ["ATS Score", "5–8 Improvements", "Side-by-side Rewrites", "Free"]
 
 type StepIcon = typeof Upload
 const HOW_IT_WORKS: { step: number; icon: StepIcon; title: string; desc: string }[] = [
@@ -39,11 +37,6 @@ const HOW_IT_WORKS: { step: number; icon: StepIcon; title: string; desc: string 
   { step: 2, icon: Cpu,       title: "Lambda Parses", desc: "AWS Lambda extracts and structures text." },
   { step: 3, icon: Brain,     title: "AI Analyzes",   desc: "Nvidia Nemotron LLM scores your resume." },
   { step: 4, icon: BarChart2, title: "Get Results",   desc: "ATS score, improvements, and rewrites." },
-]
-
-const TECH_STACK = [
-  "AWS Lambda", "DynamoDB", "API Gateway", "S3", "CloudFront",
-  "Python", "React", "Nvidia Nemotron", "OpenRouter",
 ]
 
 function useScrollReveal() {
@@ -88,6 +81,7 @@ function RevealSection({
 export function HomePage({ onNavigate }: HomePageProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle")
   const [uploadMsg, setUploadMsg] = useState("")
+  const [isDragOver, setIsDragOver] = useState(false)
   const [docs, setDocs] = useState<DocSummary[] | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const scrambleRef = useRef<TextScrambleHandle>(null)
@@ -95,16 +89,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
   useEffect(() => {
     const t = setTimeout(() => scrambleRef.current?.trigger(), 300)
     return () => clearTimeout(t)
-  }, [])
-
-  useEffect(() => {
-    const onHashChange = () => {
-      if (window.location.hash === "" || window.location.hash === "#") {
-        setTimeout(() => scrambleRef.current?.trigger(), 300)
-      }
-    }
-    window.addEventListener("hashchange", onHashChange)
-    return () => window.removeEventListener("hashchange", onHashChange)
   }, [])
 
   useEffect(() => {
@@ -167,6 +151,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
+    setIsDragOver(false)
     const file = e.dataTransfer.files[0]
     if (file) handleFile(file)
   }
@@ -180,8 +165,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
     if (uploadState === "idle")
       return (
         <>
+          <UploadCloud className="w-10 h-10 mx-auto mb-4 text-orange-400/60" />
           <p className="text-orange-100/80 text-lg font-medium">Drop your resume here</p>
-          <p className="text-orange-100/50 text-sm mt-1">PDF up to 10 MB</p>
+          <p className="text-orange-100/50 text-sm mt-1">or click to browse · PDF up to 10 MB</p>
         </>
       )
     if (uploadState === "uploading")
@@ -213,7 +199,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         className="absolute inset-0 w-full h-full pointer-events-none"
         background="transparent"
         particleColor="#fb923c"
-        particleDensity={120}
+        particleDensity={50}
         minSize={1}
         maxSize={2.5}
         speed={3}
@@ -229,44 +215,42 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="dark min-h-screen text-white">
-      {/* Fixed full-page shader background */}
-      <div className="fixed inset-0 z-0" style={{ opacity: 0.7 }}>
-        <Warp
-          style={{ width: "100%", height: "100%" }}
-          proportion={0.45}
-          softness={1}
-          distortion={0.25}
-          swirl={0.8}
-          swirlIterations={10}
-          shape="checks"
-          shapeScale={0.1}
-          scale={1}
-          rotation={0}
-          speed={1}
-          colors={["#1a0533", "#f97316", "#7c3aed", "#fbbf24"]}
-        />
-      </div>
-
       <Nav />
 
-      <div className="relative z-10">
+      {/* Hero — shader scoped here only */}
+      <div className="relative h-screen overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.35 }}>
+          <Warp
+            style={{ width: "100%", height: "100%" }}
+            proportion={0.45}
+            softness={1}
+            distortion={0.25}
+            swirl={0.8}
+            swirlIterations={10}
+            shape="checks"
+            shapeScale={0.1}
+            scale={1}
+            rotation={0}
+            speed={1}
+            colors={["#1a0533", "#f97316", "#7c3aed", "#fbbf24"]}
+          />
+        </div>
         <Hero
-          headline={{ line1: "AI Document", line2: "Intelligence Pipeline" }}
+          headline={{ line1: "Land More", line2: "Interviews" }}
           headlineNode={
             <TextScramble
               ref={scrambleRef}
-              text="AI DOCUMENT INTELLIGENCE PIPELINE"
+              text="LAND MORE INTERVIEWS"
               spanClassName="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent"
             />
           }
-          subtitle="Analyze your resume"
+          subtitle=""
           subtitleNode={
-            <p className="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed flex items-center justify-center gap-2 flex-wrap">
-              Analyze your resume
-              <FlipWords words={FLIP_WORDS} duration={2000} className="text-orange-300 font-semibold" />
+            <p className="text-lg md:text-xl text-orange-100/75 font-light leading-relaxed max-w-xl mx-auto text-center">
+              Get an ATS score, rewritten bullets, and tailored job-match feedback — in under 2 minutes.
             </p>
           }
-          trustBadge={{ text: "Powered by AI • Instant results" }}
+          trustBadge={{ text: "Free · No signup · Instant results" }}
           primaryButtonNode={sparkleButton}
         />
       </div>
@@ -283,9 +267,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
           >
             <div
               onDrop={handleDrop}
-              onDragOver={e => e.preventDefault()}
+              onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+              onDragLeave={() => setIsDragOver(false)}
               onClick={() => fileRef.current?.click()}
-              className="w-full rounded-2xl p-10 text-center cursor-pointer"
+              className={`w-full rounded-2xl p-10 text-center cursor-pointer border-2 border-dashed transition-all duration-200 ${
+                isDragOver
+                  ? "border-orange-400/80 bg-orange-500/10"
+                  : uploadState === "idle" ? "border-orange-500/25" : "border-transparent"
+              }`}
             >
               <input
                 ref={fileRef}
@@ -387,20 +376,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </div>
               )
             })}
-          </div>
-        </RevealSection>
-
-        {/* Tech stack badges */}
-        <RevealSection className="max-w-5xl mx-auto mt-8">
-          <div className="flex flex-wrap justify-center gap-2">
-            {TECH_STACK.map(tech => (
-              <span
-                key={tech}
-                className="font-mono text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/50 hover:text-white/70 hover:border-white/20 transition-colors"
-              >
-                {tech}
-              </span>
-            ))}
           </div>
         </RevealSection>
 

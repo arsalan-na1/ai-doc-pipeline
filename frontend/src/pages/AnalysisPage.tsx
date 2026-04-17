@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import confetti from "canvas-confetti"
-import { XCircle, Sparkles, Copy, Check, Download, Share2, X } from "lucide-react"
+import { XCircle, Sparkles, Copy, Check, Download, Share2 } from "lucide-react"
 import { Nav } from "../components/Nav"
 import { RatingInteraction } from "../components/ui/emoji-rating"
 import { ShineBorder } from "../components/ui/shine-border"
@@ -21,9 +21,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const PRIORITY_CARD: Record<string, string> = {
-  high:   "border-red-500/30 bg-red-950/40",
-  medium: "border-yellow-500/30 bg-yellow-950/30",
-  low:    "border-blue-500/30 bg-blue-950/30",
+  high:   "border border-red-500/30 border-l-4 border-l-red-500 bg-red-950/40",
+  medium: "border border-yellow-500/30 border-l-4 border-l-yellow-500 bg-yellow-950/30",
+  low:    "border border-blue-500/30 border-l-4 border-l-blue-500 bg-blue-950/30",
 }
 const PRIORITY_BADGE: Record<string, string> = {
   high:   "bg-red-500/20 text-red-300 border border-red-500/40",
@@ -36,7 +36,7 @@ const SHINE = ["#a855f7", "#6366f1", "#06b6d4"] as [string, string, string]
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 mb-4">
+    <div className="flex items-center gap-3 mb-6">
       <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-white/50 shrink-0">{children}</h2>
       <div className="flex-1 h-px bg-gradient-to-r from-purple-500/40 to-transparent" />
     </div>
@@ -118,6 +118,13 @@ ${rows}
 </body></html>`
 }
 
+function scoreLabel(score: number): { text: string; color: string } {
+  if (score >= 80) return { text: "Strong", color: "text-emerald-400" }
+  if (score >= 60) return { text: "Good", color: "text-blue-400" }
+  if (score >= 40) return { text: "Fair", color: "text-amber-400" }
+  return { text: "Needs Work", color: "text-red-400" }
+}
+
 export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   const [doc, setDoc] = useState<DocDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -129,7 +136,6 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [jdText, setJdText] = useState("")
   const [matchLoading, setMatchLoading] = useState(false)
   const [matchResult, setMatchResult] = useState<JobMatchResult | null>(null)
@@ -266,12 +272,14 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
     ? a.career_level.charAt(0).toUpperCase() + a.career_level.slice(1)
     : null
 
+  const { text: scoreText, color: scoreColor } = scoreLabel(displayScore)
+
   return (
-    <div className="dark min-h-screen text-white pb-32">
+    <div className="dark min-h-screen text-white pb-24">
       {shaderBg}
       <Nav onBack={onBack} showBack />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 space-y-8">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 space-y-12">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -301,7 +309,7 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
           </button>
         </div>
 
-        {/* Score ring + Breakdown side-by-side on desktop */}
+        {/* Score ring + Breakdown */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="flex flex-col items-center gap-3 md:w-48 mx-auto md:mx-0">
             <div
@@ -331,12 +339,13 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               </div>
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-white/40">ATS Score</p>
+            <p className={`text-sm font-semibold ${scoreColor}`}>{scoreText}</p>
           </div>
 
           {Object.keys(breakdown).length > 0 && (
             <div className="flex-1 w-full">
               <SectionHeading>Breakdown</SectionHeading>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {Object.entries(breakdown).map(([key, cat]) => {
                   if (!cat) return null
                   const pct = cat.max > 0 ? Math.round((cat.score / cat.max) * 100) : 0
@@ -365,39 +374,43 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
         {a?.career_level_advice && (
           <section>
             <SectionHeading>Career Advice</SectionHeading>
-            <ShineBorder color={SHINE} borderWidth={1} borderRadius={12} className="w-full p-5 bg-white/5 dark:bg-white/5">
+            <ShineBorder color={SHINE} borderWidth={1} borderRadius={12} className="w-full p-6 bg-white/5 dark:bg-white/5">
               <div className="flex gap-3 items-start">
                 <Sparkles className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                <p className="text-sm leading-relaxed text-white/80">{a.career_level_advice}</p>
+                <p className="text-base leading-relaxed text-white/80">{a.career_level_advice}</p>
               </div>
             </ShineBorder>
           </section>
         )}
 
         {/* ATS Issues */}
-        {atsIssues.length > 0 && (
-          <section>
-            <SectionHeading>ATS Issues ({atsIssues.length})</SectionHeading>
-            <ul className="space-y-2">
+        <section>
+          <SectionHeading>ATS Issues ({atsIssues.length})</SectionHeading>
+          {atsIssues.length > 0 ? (
+            <ul className="space-y-3">
               {atsIssues.map((issue, i) => (
-                <li key={i} className="flex gap-3 items-start text-sm p-3.5 rounded-xl bg-red-950/40 border border-red-500/20">
-                  <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <span className="text-white/75">{issue}</span>
+                <li key={i} className="flex gap-3 items-start text-base p-4 rounded-xl bg-red-950/40 border border-red-500/20">
+                  <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                  <span className="text-white/75 leading-relaxed">{issue}</span>
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          ) : (
+            <p className="text-base text-emerald-400/80 p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20">
+              No ATS issues found — your formatting looks screener-friendly ✓
+            </p>
+          )}
+        </section>
 
-        {/* Improvements — sorted HIGH→MEDIUM→LOW, with copy button */}
-        {sortedImprovements.length > 0 && (
-          <section>
-            <SectionHeading>Improvements ({sortedImprovements.length})</SectionHeading>
+        {/* Improvements */}
+        <section>
+          <SectionHeading>Improvements ({sortedImprovements.length})</SectionHeading>
+          {sortedImprovements.length > 0 ? (
             <ul className="space-y-3">
               {sortedImprovements.map(imp => (
                 <li
                   key={imp.id}
-                  className={`p-4 rounded-xl border text-sm group ${PRIORITY_CARD[imp.priority?.toLowerCase()] ?? "border-white/10 bg-white/5"}`}
+                  className={`p-5 rounded-xl text-base group ${PRIORITY_CARD[imp.priority?.toLowerCase()] ?? "border border-white/10 bg-white/5"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2 flex-1">
@@ -420,19 +433,23 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          ) : (
+            <p className="text-base text-white/50 p-4 rounded-xl bg-white/5 border border-white/10">
+              No improvements needed — your resume looks strong.
+            </p>
+          )}
+        </section>
 
-        {/* Rewrites — tabbed */}
-        {rewrites.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-white/50 shrink-0">
-                  Rewrites ({rewrites.length})
-                </h2>
-                <div className="flex-1 h-px bg-gradient-to-r from-purple-500/40 to-transparent" />
-              </div>
+        {/* Rewrites */}
+        <section>
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-white/50 shrink-0">
+                Rewrites ({rewrites.length})
+              </h2>
+              <div className="flex-1 h-px bg-gradient-to-r from-purple-500/40 to-transparent" />
+            </div>
+            {rewrites.length > 0 && (
               <button
                 onClick={handleDownloadPDF}
                 className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
@@ -440,86 +457,65 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
                 <Download className="w-3.5 h-3.5" />
                 Download PDF
               </button>
-            </div>
+            )}
+          </div>
 
-            {/* Tab bar — horizontally scrollable on mobile */}
-            <div className="overflow-x-auto pb-1">
-              <div className="flex gap-1 min-w-max">
-                {rewrites.map((rw, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
-                      activeTab === i
-                        ? "bg-gradient-to-r from-purple-600/80 to-cyan-500/80 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                        : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
-                    }`}
-                  >
-                    {rw.section}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Active rewrite panel */}
-            {rewrites[activeTab] && (
-              <div className="mt-3 rounded-xl border border-white/10 overflow-hidden text-sm">
-                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                  <div className="p-4 space-y-1.5 bg-red-950/25">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Original</p>
-                    <p className="leading-relaxed text-white/55">{rewrites[activeTab].original}</p>
-                  </div>
-                  <div className="p-4 space-y-1.5 bg-emerald-950/25">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Suggested</p>
-                    <p className="leading-relaxed text-white/85">{rewrites[activeTab].suggested}</p>
-                  </div>
+          {rewrites.length > 0 ? (
+            <>
+              <div className="overflow-x-auto pb-1">
+                <div className="flex gap-1 min-w-max">
+                  {rewrites.map((rw, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveTab(i)}
+                      className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+                        activeTab === i
+                          ? "bg-gradient-to-r from-purple-600/80 to-cyan-500/80 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                          : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      {rw.section}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-          </section>
-        )}
 
-        {/* Rating */}
-        <section className="pt-4 flex flex-col items-center gap-2">
-          <p className="text-xs text-white/35 uppercase tracking-widest">How useful was this analysis?</p>
-          <RatingInteraction />
+              {rewrites[activeTab] && (
+                <div className="mt-3 rounded-xl border border-white/10 overflow-hidden text-base">
+                  <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                    <div className="p-5 space-y-2 bg-red-950/25">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-red-400/60">Original</p>
+                      <p className="leading-relaxed text-white/55">{rewrites[activeTab].original}</p>
+                    </div>
+                    <div className="p-5 space-y-2 bg-emerald-950/25">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Suggested</p>
+                      <p className="leading-relaxed text-white/85">{rewrites[activeTab].suggested}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-base text-white/50 p-4 rounded-xl bg-white/5 border border-white/10">
+              No rewrites suggested — your phrasing is strong.
+            </p>
+          )}
         </section>
-      </div>
 
-      {/* Floating Job Match button */}
-      <button
-        onClick={() => setDrawerOpen(true)}
-        className="fixed bottom-6 right-6 z-40 px-5 py-3 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/25 hover:opacity-90 transition-opacity"
-      >
-        Job Match
-      </button>
-
-      {/* Job Match drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => { setDrawerOpen(false); setMatchResult(null); setMatchError("") }}
-          />
-          <div className="relative w-full max-w-lg mx-4 rounded-t-2xl sm:rounded-2xl bg-zinc-900 border border-white/10 p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-base text-white">Job Match Analysis</h2>
-              <button
-                onClick={() => { setDrawerOpen(false); setMatchResult(null); setMatchError("") }}
-                className="text-white/40 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
+        {/* Job Match — inline */}
+        <section>
+          <SectionHeading>Job Match</SectionHeading>
+          <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
             {!matchResult ? (
-              <>
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-white/50 leading-relaxed">
+                  Paste a job description to see your match score, missing keywords, and tailoring tips.
+                </p>
                 <textarea
                   value={jdText}
-                  onChange={e => setJdText(e.target.value)}
+                  onChange={e => { setJdText(e.target.value); setMatchError("") }}
                   placeholder="Paste the job description here…"
-                  rows={8}
+                  rows={6}
                   maxLength={5000}
                   className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-white placeholder:text-white/30"
                 />
@@ -534,9 +530,9 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
                   </button>
                 </div>
                 {matchError && <p className="text-sm text-red-400">{matchError}</p>}
-              </>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="p-5 space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
                     {matchResult.match_score}%
@@ -594,8 +590,14 @@ export function AnalysisPage({ docId, onBack }: AnalysisPageProps) {
               </div>
             )}
           </div>
-        </div>
-      )}
+        </section>
+
+        {/* Rating */}
+        <section className="pt-4 flex flex-col items-center gap-2">
+          <p className="text-xs text-white/35 uppercase tracking-widest">How useful was this analysis?</p>
+          <RatingInteraction />
+        </section>
+      </div>
     </div>
   )
 }

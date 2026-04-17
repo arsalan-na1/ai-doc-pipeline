@@ -12,8 +12,11 @@ export function Nav({ onBack, showBack }: NavProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const t = setTimeout(() => logoRef.current?.trigger(), 200)
-    return () => clearTimeout(t)
+    if (!sessionStorage.getItem("logo-scrambled")) {
+      sessionStorage.setItem("logo-scrambled", "1")
+      const t = setTimeout(() => logoRef.current?.trigger(), 200)
+      return () => clearTimeout(t)
+    }
   }, [])
 
   const links = showBack && onBack ? (
